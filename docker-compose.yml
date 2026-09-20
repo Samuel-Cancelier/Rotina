@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  telegram-bot:
+    build: .
+    container_name: rotina_telegram_bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-8949673934:AAEjhmDizSs0hbhhDVXDnNXf8fLr1PA1KlQ}
+      - FIREBASE_CREDENTIALS_PATH=chave-firebase.json
+    volumes:
+      - ./chave-firebase.json:/app/chave-firebase.json:ro

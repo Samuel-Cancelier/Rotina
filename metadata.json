@@ -1,0 +1,6 @@
+{
+  "name": "Gestão de Rotina e Metas",
+  "description": "Sistema de gestão de rotina pessoal, metas recorrentes e score ponderado com Python, Firestore e Telegram Bot.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

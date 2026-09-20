@@ -1,0 +1,15 @@
+{
+  "name": "rotina-metas-worker",
+  "version": "1.0.0",
+  "description": "Backend serverless no Cloudflare Workers: API REST + Webhook Telegram + Firestore REST",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.101.0"
+  }
+}

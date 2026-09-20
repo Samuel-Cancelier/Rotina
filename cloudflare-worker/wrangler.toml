@@ -1,0 +1,12 @@
+name = "rotina-metas-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+TELEGRAM_BOT_TOKEN = "8949673934:AAEjhmDizSs0hbhhDVXDnNXf8fLr1PA1KlQ"
+FIREBASE_PROJECT_ID = "rotina-94433"
+FIREBASE_CLIENT_EMAIL = "firebase-adminsdk-fbsvc@rotina-94433.iam.gserviceaccount.com"
+
+# Nota: Para produção segura, defina a chave privada usando:
+# wrangler secret put FIREBASE_PRIVATE_KEY

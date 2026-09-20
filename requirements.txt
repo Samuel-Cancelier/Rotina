@@ -1,0 +1,7 @@
+firebase-admin>=6.5.0
+pyTelegramBotAPI>=4.15.0
+python-dotenv>=1.0.0
+google-cloud-firestore>=2.14.0
+flask>=3.0.0
+gunicorn>=21.2.0
+flask-cors>=4.0.0
