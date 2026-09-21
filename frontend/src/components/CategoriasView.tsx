@@ -72,14 +72,12 @@ export const CategoriasView: React.FC<CategoriasViewProps> = ({
   const pilarSelecionado = pilares.find((p) => p.id === novoPilarId);
   const corDoPilarSelecionado = pilarSelecionado?.cor || CORES_PILARES[novoPilarId as PilarId] || '#10b981';
 
-  // Registros do mês atual (dinâmico)
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
-  const registrosMesAtual = registrosMensais.filter((r) => r.ano === currentYear && r.mes === currentMonth);
+  // Registros do mês atual (Setembro 2026)
+  const registrosSetembro = registrosMensais.filter((r) => r.ano === 2026 && r.mes === 9);
 
   // Calcular progresso quantitativo de cada categoria com cor estritamente herdada do Pilar
   const categoriasComProgresso = categorias.map((cat) => {
-    const reg = registrosMesAtual.find((r) => r.categoria_id === cat.id);
+    const reg = registrosSetembro.find((r) => r.categoria_id === cat.id);
     const realizado = reg ? reg.valor_total : 0;
     const meta = cat.meta_mensal || 0;
     const pctAtingido = meta > 0 ? Math.round((realizado / meta) * 100) : (realizado > 0 ? 100 : 0);

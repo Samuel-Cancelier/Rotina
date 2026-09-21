@@ -297,23 +297,6 @@ def registrar_feito(cat_nome_ou_id: str, ativ_nome: str, valor: float) -> Dict[s
             "atualizado_em": firestore.SERVER_TIMESTAMP
         })
 
-    # Grava também na coleção historico_atividades para sincronizar com a aba Lançamentos
-    try:
-        db.collection("historico_atividades").add({
-            "categoria_id": cat["id"],
-            "categoria_nome": cat.get("nome"),
-            "pilar_id": pilar_id,
-            "atividade_nome": ativ_nome,
-            "valor": valor,
-            "unidade": unidade,
-            "pontos_gerados": pontos_gerados,
-            "data_registro": agora.isoformat(),
-            "ano": ano,
-            "mes": mes
-        })
-    except Exception as err:
-        print(f"Aviso ao salvar histórico de atividade: {err}")
-
     # Busca nome do pilar
     pilares = listar_pilares()
     pilar_nome = next((p["nome"] for p in pilares if p.get("id") == pilar_id), "Pilar Geral")
@@ -469,8 +452,95 @@ def excluir_atividade(atividade_id: str) -> bool:
         return False
 
 # =====================================================================
-# 6. AGENDAMENTOS E EVENTOS DE CALENDÁRIO
+# 7. HISTÓRICO DE ATIVIDADES
 # =====================================================================
+
+def listar_historico_atividades() -> List[Dict[str, Any]]:
+    try:
+        docs = db.collection("historico_atividades").stream()
+        historico = []
+        for doc in docs:
+            d = doc.to_dict()
+            d["id"] = doc.id
+            # Evita o erro de serialização do Datetime
+            if isinstance(d.get("data_registro"), datetime):
+                d["data_registro"] = d["data_registro"].isoformat()
+            historico.append(d)
+        historico.sort(key=lambda x: x.get("data_registro", ""), reverse=True)
+        return historico
+    except Exception as e:
+        print(f"Erro listar_historico_atividades: {e}")
+        return []
+
+def excluir_historico_atividade(historico_id: str) -> bool:
+    try:
+        doc_ref = db.collection("historico_atividades").document(historico_id)
+        doc = doc_ref.get()
+        if doc.exists:
+            old = doc.to_dict()
+            # Atualiza também os registros mensais descontando os valores (espelhando a lógica do cloudflare worker)
+            id_registro = f"reg_{old.get('ano')}_{str(old.get('mes', '')).zfill(2)}_{old.get('categoria_id')}"
+            reg_ref = db.collection("registros_mensais").document(id_registro)
+            reg = reg_ref.get()
+            if reg.exists:
+                reg_data = reg.to_dict()
+                bd = reg_data.get("atividades_breakdown", {})
+                ativ_nome = old.get("atividade_nome")
+                valor = old.get("valor", 0)
+                if ativ_nome in bd:
+                    bd[ativ_nome] = max(0, bd[ativ_nome] - valor)
+                novo_total = max(0, reg_data.get("valor_total", 0) - valor)
+                reg_ref.update({
+                    "valor_total": novo_total,
+                    "atividades_breakdown": bd,
+                    "atualizado_em": firestore.SERVER_TIMESTAMP
+                })
+        
+        doc_ref.delete()
+        return True
+    except Exception as e:
+        print(f"Erro excluir_historico_atividade: {e}")
+        return False
+
+def atualizar_historico_atividade(historico_id: str, dados: Dict[str, Any]) -> bool:
+    try:
+        doc_ref = db.collection("historico_atividades").document(historico_id)
+        doc = doc_ref.get()
+        if doc.exists and "valor" in dados:
+            old = doc.to_dict()
+            diff = float(dados["valor"]) - old.get("valor", 0)
+            
+            id_registro = f"reg_{old.get('ano')}_{str(old.get('mes', '')).zfill(2)}_{old.get('categoria_id')}"
+            reg_ref = db.collection("registros_mensais").document(id_registro)
+            reg = reg_ref.get()
+            if reg.exists:
+                reg_data = reg.to_dict()
+                bd = reg_data.get("atividades_breakdown", {})
+                ativ_nome = old.get("atividade_nome")
+                if ativ_nome in bd:
+                    bd[ativ_nome] = max(0, bd[ativ_nome] + diff)
+                else:
+                    bd[ativ_nome] = max(0, diff)
+                novo_total = max(0, reg_data.get("valor_total", 0) + diff)
+                reg_ref.update({
+                    "valor_total": novo_total,
+                    "atividades_breakdown": bd,
+                    "atualizado_em": firestore.SERVER_TIMESTAMP
+                })
+            
+            # Recalcula pontos
+            fator_conversao = old.get("pontos_gerados", 0) / old.get("valor", 1) if old.get("valor", 0) > 0 else 1
+            novo_pontos = float(dados["valor"]) * fator_conversao
+            
+            doc_ref.update({
+                "valor": float(dados["valor"]),
+                "pontos_gerados": novo_pontos,
+            })
+            return True
+        return False
+    except Exception as e:
+        print(f"Erro atualizar_historico_atividade: {e}")
+        return False
 
 def listar_agendamentos() -> List[Dict[str, Any]]:
     try:
@@ -518,165 +588,4 @@ def excluir_agendamento(agendamento_id: str) -> bool:
     except Exception as e:
         print(f"Erro excluir_agendamento: {e}")
         return False
-
-# =====================================================================
-# 7. HISTÓRICO DE ATIVIDADES & LANÇAMENTOS RÁPIDOS
-# =====================================================================
-
-def listar_historico_atividades() -> List[Dict[str, Any]]:
-    try:
-        docs = db.collection("historico_atividades").stream()
-        historico = []
-        for doc in docs:
-            d = doc.to_dict()
-            d["id"] = doc.id
-            historico.append(d)
-        historico.sort(key=lambda x: str(x.get("data_registro", "")), reverse=True)
-        return historico
-    except Exception as e:
-        print(f"Erro listar_historico_atividades: {e}")
-        return []
-
-def cadastrar_historico_atividade(dados: Dict[str, Any]) -> str:
-    categoria_id = dados.get("categoria_id")
-    atividade_nome = dados.get("atividade_nome")
-    valor = float(dados.get("valor", 0))
-
-    cat = obter_categoria(categoria_id) or buscar_categoria_por_nome(categoria_id)
-    if not cat:
-        raise ValueError("Categoria não encontrada")
-
-    agora = datetime.now()
-    ano = int(dados.get("ano") or agora.year)
-    mes = int(dados.get("mes") or agora.month)
-    unidade = cat.get("unidade_padrao", "un")
-    pontos_unit = float(cat.get("pontos_por_unidade", 1.0))
-    pontos_gerados = round(valor * pontos_unit, 2)
-    data_reg = agora.isoformat()
-
-    doc_data = {
-        "categoria_id": cat["id"],
-        "categoria_nome": cat.get("nome"),
-        "atividade_nome": atividade_nome,
-        "valor": valor,
-        "unidade": unidade,
-        "pontos_gerados": pontos_gerados,
-        "data_registro": data_reg,
-        "ano": ano,
-        "mes": mes
-    }
-
-    _, doc_ref = db.collection("historico_atividades").add(doc_data)
-
-    # Atualiza o registro mensal correspondente
-    id_registro = f"reg_{ano}_{mes:02d}_{cat['id']}"
-    doc_reg_ref = db.collection("registros_mensais").document(id_registro)
-    doc_reg = doc_reg_ref.get()
-
-    if doc_reg.exists:
-        reg_dados = doc_reg.to_dict()
-        breakdown = reg_dados.get("atividades_breakdown", {})
-        breakdown[atividade_nome] = round(breakdown.get(atividade_nome, 0) + valor, 2)
-        novo_total = round(reg_dados.get("valor_total", 0) + valor, 2)
-        doc_reg_ref.update({
-            "valor_total": novo_total,
-            "atividades_breakdown": breakdown,
-            "atualizado_em": firestore.SERVER_TIMESTAMP
-        })
-    else:
-        doc_reg_ref.set({
-            "ano": ano,
-            "mes": mes,
-            "categoria_id": cat["id"],
-            "categoria_nome": cat.get("nome"),
-            "pilar_id": cat.get("pilar_id", "pilar_atividade_fisica"),
-            "valor_total": valor,
-            "unidade": unidade,
-            "atividades_breakdown": {atividade_nome: valor},
-            "atualizado_em": firestore.SERVER_TIMESTAMP
-        })
-
-    return doc_ref.id
-
-def atualizar_historico_atividade(historico_id: str, dados: Dict[str, Any]) -> bool:
-    try:
-        doc_ref = db.collection("historico_atividades").document(historico_id)
-        doc = doc_ref.get()
-        if not doc.exists:
-            return False
-
-        old = doc.to_dict()
-        novo_valor = dados.get("valor")
-        if novo_valor is not None:
-            novo_valor = float(novo_valor)
-            antigo_valor = float(old.get("valor", old.get("valor_unidade", 0)))
-            diff = novo_valor - antigo_valor
-            ano = int(old.get("ano", datetime.now().year))
-            mes = int(old.get("mes", datetime.now().month))
-            cat_id = old.get("categoria_id")
-            ativ_nome = old.get("atividade_nome")
-
-            # Atualiza registros mensais com a diferença
-            id_registro = f"reg_{ano}_{mes:02d}_{cat_id}"
-            reg_ref = db.collection("registros_mensais").document(id_registro)
-            reg_doc = reg_ref.get()
-            if reg_doc.exists:
-                reg_dados = reg_doc.to_dict()
-                breakdown = reg_dados.get("atividades_breakdown", {})
-                breakdown[ativ_nome] = max(0.0, round(breakdown.get(ativ_nome, 0) + diff, 2))
-                new_total = max(0.0, round(reg_dados.get("valor_total", 0) + diff, 2))
-                reg_ref.update({
-                    "valor_total": new_total,
-                    "atividades_breakdown": breakdown,
-                    "atualizado_em": firestore.SERVER_TIMESTAMP
-                })
-
-            cat = obter_categoria(cat_id)
-            pontos_unit = float(cat.get("pontos_por_unidade", 1.0)) if cat else 1.0
-            novos_pontos = round(novo_valor * pontos_unit, 2)
-            doc_ref.update({
-                "valor": novo_valor,
-                "pontos_gerados": novos_pontos,
-                "atualizado_em": firestore.SERVER_TIMESTAMP
-            })
-            return True
-        return False
-    except Exception as e:
-        print(f"Erro atualizar_historico_atividade: {e}")
-        return False
-
-def excluir_historico_atividade(historico_id: str) -> bool:
-    try:
-        doc_ref = db.collection("historico_atividades").document(historico_id)
-        doc = doc_ref.get()
-        if doc.exists:
-            old = doc.to_dict()
-            valor_removido = float(old.get("valor", old.get("valor_unidade", 0)))
-            ano = int(old.get("ano", datetime.now().year))
-            mes = int(old.get("mes", datetime.now().month))
-            cat_id = old.get("categoria_id")
-            ativ_nome = old.get("atividade_nome")
-
-            # Deduz de registros mensais
-            id_registro = f"reg_{ano}_{mes:02d}_{cat_id}"
-            reg_ref = db.collection("registros_mensais").document(id_registro)
-            reg_doc = reg_ref.get()
-            if reg_doc.exists:
-                reg_dados = reg_doc.to_dict()
-                breakdown = reg_dados.get("atividades_breakdown", {})
-                breakdown[ativ_nome] = max(0.0, round(breakdown.get(ativ_nome, 0) - valor_removido, 2))
-                new_total = max(0.0, round(reg_dados.get("valor_total", 0) - valor_removido, 2))
-                reg_ref.update({
-                    "valor_total": new_total,
-                    "atividades_breakdown": breakdown,
-                    "atualizado_em": firestore.SERVER_TIMESTAMP
-                })
-
-            doc_ref.delete()
-            return True
-        return False
-    except Exception as e:
-        print(f"Erro excluir_historico_atividade: {e}")
-        return False
-
 

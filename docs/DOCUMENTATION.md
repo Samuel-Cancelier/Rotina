@@ -1,185 +1,84 @@
-# 📘 Documentação Oficial: Sistema de Gestão de Rotina, Metas e Score
+# Documentação Oficial: Sistema de Gestão de Rotina e Score
 
-Este manual foi elaborado para servir tanto como referência técnica quanto como guia prático do usuário no dia a dia.
-
----
-
-## 📑 Sumário
-1. [Parte 1: Visão Sistêmica e Arquitetura Matemática](#parte-1-visão-sistêmica-e-arquitetura-matemática)
-2. [Parte 2: Guia do Usuário – As 8 Abas do Painel Web](#parte-2-guia-do-usuário--as-8-abas-do-painel-web)
-3. [Parte 3: Manual Completo do Bot no Telegram](#parte-3-manual-completo-do-bot-no-telegram)
-4. [Parte 4: Banco de Dados Firebase Firestore & Boas Práticas](#parte-4-banco-de-dados-firebase-firestore--boas-práticas)
+Este documento está dividido em duas partes:
+1. **Visão Sistêmica e Analítica:** Voltada para o entendimento da arquitetura matemática, estrutura de dados e regras de negócio do sistema.
+2. **Guia do Usuário:** Um manual prático de como navegar, configurar e utilizar o sistema no dia a dia.
 
 ---
 
 ## PARTE 1: Visão Sistêmica e Arquitetura Matemática
 
-O sistema utiliza uma hierarquia estrita de **3 níveis** para organizar a rotina e mensurar o progresso:
+O sistema foi arquitetado em uma hierarquia estrita de 3 níveis para garantir escalabilidade, mantendo o cálculo do Score limpo e focado no que importa.
 
-```
-┌────────────────────────────────────────────────────────┐
-│            NÍVEL 1: PILARES SOBERANOS                  │
-│  (Grandes áreas de vida com Peso % e Meta em Pontos)   │
-└───────────────────────────┬────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│          NÍVEL 2: CATEGORIAS QUANTITATIVAS             │
-│   (Hábitos com unidade padrão e fator de conversão)    │
-└───────────────────────────┬────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│           NÍVEL 3: ATIVIDADES SEGMENTADAS              │
-│    (Execuções específicas: "Parque" vs "Esteira")      │
-└────────────────────────────────────────────────────────┘
-```
+### 1. A Hierarquia de Dados
 
-### 1.1 A Hierarquia de Dados
+*   **Nível 1: Pilares (Soberanos)**
+    *   **O que são:** As áreas macro da vida (ex: Atividade Física, Estudos, Domésticas). 
+    *   **Propriedades:** Possuem um `peso_no_score_geral` (em %) e uma `meta_pontos_mensal`.
+    *   **Regra de Negócio:** São fixos no código (estabilidade). O "Trabalho", por exemplo, pode ter peso zero e meta zero, servindo apenas para rastreamento de horas sem impactar o score comportamental.
+*   **Nível 2: Categorias (Quantitativas)**
+    *   **O que são:** Os hábitos centrais dentro de um pilar (ex: Corrida, Musculação, Leitura).
+    *   **Propriedades:** Possuem uma `unidade_padrao` (km, horas, páginas), uma `meta_mensal` puramente quantitativa e um `fator de conversão (pontos_por_unidade)`.
+    *   **Regra de Negócio:** Podem ser ativadas ou inativadas (soft delete). Se inativadas, o histórico de pontos e métricas passadas não se perde, garantindo a integridade dos dados estatísticos.
+*   **Nível 3: Atividades (Descritivas)**
+    *   **O que são:** As execuções específicas de uma categoria (ex: "Corrida no Parque", "Corrida na Esteira").
+    *   **Propriedades:** São labels/tags para rastreamento granular e servem como âncora para integrações externas, como lançamentos via Telegram.
 
-* **Nível 1: Pilares (Soberanos)**
-  * **O que são:** As 5 grandes áreas da sua vida (*Atividade Física*, *Estudos e Leitura*, *Trabalho*, *Tarefas Domésticas*, *Diversos*).
-  * **Propriedades:** Possuem um `peso_no_score_geral` (%) e uma `meta_pontos_mensal`.
-  * **Configuração Flexível:** Você pode personalizar os pesos e metas de cada pilar diretamente na aba **Pilares** da interface web.
-    * *Dica sobre o Pilar "Trabalho":* Você pode deixá-lo com Peso 0% e Meta 0 (caso queira utilizá-lo apenas para registrar horas de expediente sem afetar seu score pessoal) ou dar um peso ativo (ex: 30%) com meta (ex: 80 pts), caso queira que o trabalho componha sua nota do mês.
-* **Nível 2: Categorias (Quantitativas)**
-  * **O que são:** Os hábitos centrais dentro de um pilar (ex: *Musculação*, *Corrida*, *Leitura*, *Limpeza*).
-  * **Propriedades:** Possuem uma `unidade_padrao` (km, treinos, páginas, horas, vezes), uma `meta_mensal` pura e um **fator de conversão** (`pontos_por_unidade`).
-  * **Regra de Cores:** Cada categoria herda e preserva a identidade visual da cor do seu Pilar Soberano.
-* **Nível 3: Atividades (Descritivas)**
-  * **O que são:** As execuções específicas de uma categoria (ex: dentro de *Corrida*, você pode ter *Corrida no Parque* e *Esteira na Academia*).
-  * **Propriedades:** Servem como âncora para os lançamentos via Telegram (`/feito`) e para o calendário de rotinas.
+### 2. Motor de Cálculos e Score Ponderado
+
+A grande sacada do sistema é como ele transforma unidades completamente diferentes (quilômetros, páginas lidas, idas à academia) em uma métrica unificada (Pontos) e, finalmente, em um Score Ponderado (% de Sucesso).
+
+**Passo A: Conversão de Unidades para Pontos**
+Quando uma atividade é registrada, ela gera pontos para a sua categoria com base no seu fator de conversão.
+*   *Exemplo:* A categoria "Corrida" tem conversão de `2 pts / km`. Um registro de `5 km` gera `10 pontos`. A categoria "Musculação" tem conversão de `10 pts / treino`. Um treino gera `10 pontos`.
+
+**Passo B: Agregação no Pilar (O Balde de Pontos)**
+Todos os pontos gerados pelas categorias sobem para o Pilar.
+*   *Fórmula:* `Total de Pontos do Pilar = Soma(Pontos de todas as categorias atreladas a ele no mês)`.
+*   *Atingimento do Pilar:* `(Total de Pontos do Pilar / Meta Mensal do Pilar) * 100`. (Este valor é travado no máximo em 120% no cálculo do score, para evitar que um super-foco em um pilar maqueie o abandono de outro).
+
+**Passo C: Score Geral Ponderado (A Métrica Principal)**
+O Score Geral avalia o atingimento global do mês, respeitando a importância (peso) que o usuário deu para cada Pilar.
+*   *Fórmula:* `Soma( Atingimento do Pilar % * (Peso do Pilar / 100) )`.
+*   *Exemplo:* Se "Atividade Física" pesa 50% e o usuário atingiu 100% da meta, ele já garantiu 50/100 no Score Geral. Se "Domésticas" pesa 20% e ele fez metade da meta (50%), ele soma mais 10/100. Score atual: 60/100.
 
 ---
 
-### 1.2 Motor de Cálculos e Score Ponderado
+## PARTE 2: Guia do Usuário Final
 
-O sistema transforma unidades completamente diferentes (quilômetros corridos, páginas lidas, treinos de musculação) em uma pontuação unificada e, por fim, no **Score Geral (0 a 100)**.
+Bem-vindo ao seu Sistema de Gestão de Rotina! Este painel foi desenhado para transformar os seus hábitos em dados mensuráveis sem engessar a sua rotina.
 
-#### Passo A: Conversão de Unidades em Pontos
-Toda vez que você registra uma quantidade realizada de uma categoria, os pontos são calculados:
-$$\text{Pontos Gerados} = \text{Quantidade Lançada} \times \text{Pontos por Unidade}$$
+### Entendendo as Abas (Navegação)
 
-* *Exemplo 1:* Categoria "Corrida" (1 km = 2 pts) ➔ Ao correr 5 km: $5 \times 2 = 10 \text{ pontos}$.
-* *Exemplo 2:* Categoria "Musculação" (1 treino = 10 pts) ➔ Ao fazer 1 treino: $1 \times 10 = 10 \text{ pontos}$.
-* *Exemplo 3:* Categoria "Leitura" (1 pág = 0.5 pts) ➔ Ao ler 30 págs: $30 \times 0.5 = 15 \text{ pontos}$.
+1.  **Pilares (Visão Geral & Score):** 
+    *   *O que é:* O coração do seu sistema. Aqui você vê o seu **Score Geral Ponderado** (a nota de 0 a 100 do seu mês) e o progresso das suas metas macro.
+    *   *O que fazer aqui:* Clique no ícone de lápis ao lado de um Pilar para definir quantos pontos você quer atingir no mês e qual a importância (Peso %) desse Pilar na sua vida.
 
-#### Passo B: Agregação no Pilar Soberano
-Todos os pontos das categorias atreladas ao pilar sobem para o "balde" mensal do pilar:
-$$\text{Total de Pontos do Pilar} = \sum \text{Pontos de todas as categorias do Pilar no mês}$$
-$$\text{Atingimento do Pilar (\%)} = \left( \frac{\text{Total de Pontos do Pilar}}{\text{Meta Mensal do Pilar}} \right) \times 100$$
+2.  **Categorias (A Régua de Medição):**
+    *   *O que é:* Onde você define "como" vai ganhar pontos.
+    *   *O que fazer aqui:* Crie novas categorias (ex: "Yoga", "Estudo de Inglês"). Configure qual é a unidade de medida (minutos, aulas, páginas) e, o mais importante, defina **quantos pontos** cada 1 unidade gera. É aqui também que você pode inativar um hábito antigo que não faz mais sentido.
 
-> [!NOTE]
-> **A Trava de Equilíbrio (Cap de 120%):**
-> Para o cálculo do Score Geral, o atingimento de cada pilar é limitado em no máximo **120%**. Isso impede que um super-foco exagerado em um único pilar (ex: correr 300% da meta de Atividade Física) mascare o abandono total de outros pilares (como Estudos ou Tarefas Domésticas).
+3.  **Atividades (Os Seus Lançamentos):**
+    *   *O que é:* Onde a vida real acontece. É a divisão mais específica do sistema.
+    *   *O que fazer aqui:* Cadastre atividades específicas. Por exemplo, dentro da categoria "Musculação", crie as atividades "Treino A (Peito)", "Treino B (Costas)". Se quiser renomear uma atividade, basta passar o mouse em cima do nome dela e clicar no ícone de terminal!
 
-#### Passo C: Score Geral Ponderado (Nota do Mês)
-O Score Geral avalia o atingimento global do mês respeitando os pesos atribuídos a cada pilar:
-$$\text{Score Geral} = \frac{\sum (\text{Atingimento do Pilar \% (travado em 120)} \times \text{Peso do Pilar})}{\sum \text{Pesos dos Pilares com Meta}}$$
+4.  **Calendário (Visão Temporal):**
+    *   *O que é:* Para agendamentos e visualização de quando as coisas foram feitas. Você pode marcar um hábito como concluído diretamente por aqui.
 
----
+5.  **Analytics & Dashboard:**
+    *   *O que é:* Quando você tiver meses de dados acumulados, essa aba vai gerar gráficos mostrando seus picos de produtividade, gargalos e distribuição do seu esforço.
 
-## PARTE 2: Guia do Usuário – As 8 Abas do Painel Web
+### Primeiros Passos: Configurando o seu Mês
 
-O painel web (`http://localhost:3000`) foi projetado com uma interface escura e moderna para visualização intuitiva:
+**Passo 1: Ajuste os pesos da sua vida (Aba Pilares)**
+A soma dos pesos dos seus Pilares deve idealmente dar 100%. Se você quer focar muito em Saúde neste mês, coloque o Peso de "Atividade Física" em 50%, "Estudos" em 30% e "Domésticas" em 20%. Ajuste a Meta Mensal de pontos (ex: 100 pontos para Atividade Física).
 
-### 1. 🛡️ Aba Pilares
-* **O que você vê:** O velocímetro do seu **Score Geral Ponderado**, o resumo de pontos conquistados versus a meta em cada pilar e gráficos comparativos.
-* **O que fazer:** Clique no botão de edição de pesos/metas para ajustar a importância de cada pilar na sua vida. A soma ideal dos pesos dos pilares com meta é 100%.
+**Passo 2: Dê valor aos seus hábitos (Aba Categorias)**
+Vá em Categorias e edite a pontuação. Se você definiu que precisa de 100 pontos em Atividade Física no mês, defina as regras: 1km de corrida vale 2 pontos; 1 treino de musculação vale 10 pontos. O sistema fará a matemática para você durante o mês.
 
-### 2. 📁 Aba Categorias
-* **O que você vê:** A lista de todos os seus hábitos quantitativos, com barras de progresso, meta em unidade pura e total de pontos gerados no mês.
-* **O que fazer:** Crie novos hábitos (botão "Nova Categoria"), edite fatores de conversão (ex: mudar de 2 para 3 pts/km) ou filtre por pilar.
+**Passo 3: Comece a lançar (Integração Bot - Futuro)**
+Os lançamentos diários são as Atividades. Embora você possa gerenciá-las no painel, a arquitetura foi desenhada para que você, no futuro próximo, possa simplesmente mandar uma mensagem no Telegram (ex: `/feito corrida esteira 5`) e o sistema converterá isso em `10 pontos` para o seu pilar automaticamente, atualizando o seu Score Geral em tempo real.
 
-### 3. 📌 Aba Atividades
-* **O que você vê:** A segmentação das atividades vinculadas a cada categoria.
-* **O que fazer:** Cadastre novas rotinas específicas (ex: "Treino A - Peito e Tríceps") e defina se a atividade é recorrente e se afeta a meta.
-
-### 4. 📅 Aba Calendário
-* **O que você vê:** Calendário mensal interativo com seus compromissos e hábitos do dia.
-* **O que fazer:**
-  * **Agendar Rotina:** Agende a execução de uma atividade cadastrada para uma data específica.
-  * **Agendar Pontual:** Crie lembretes ou tarefas avulsas (ex: "Consulta médica às 15h").
-  * **Marcar como Concluído:** Clique no checkbox para dar baixa na tarefa.
-
-### 5. 📋 Aba Lançamentos (Histórico)
-* **O que você vê:** Tabela com todos os lançamentos individuais realizados no sistema (seja pelo Bot do Telegram ou pela Web).
-* **O que fazer:**
-  * **Lançamento Rápido:** Registre uma atividade realizada diretamente pelo painel.
-  * **Edição de Quantidade:** Corrija um valor lançado errado com recálculo imediato dos pontos.
-  * **Exclusão:** Exclua um lançamento acidental (os pontos são deduzidos automaticamente do seu pilar).
-
-### 6. 🤖 Aba Telegram Bot (Simulador)
-* **O que você vê:** Um simulador em tempo real de chat do Telegram dentro da própria interface web.
-* **O que fazer:** Teste comandos do bot (como `/feito`, `/score`, `/agenda`) diretamente pelo navegador sem precisar pegar o celular.
-
-### 7. 📊 Aba Analytics & Dashboard
-* **O que você vê:** Gráficos analíticos de evolução:
-  * **Visão Semanal:** Distribuição de hábitos por dia da semana (Segunda a Domingo).
-  * **Visão Mensal:** Progresso consolidado do mês selecionado.
-  * **Visão Anual:** Balanço comparativo mês a mês ao longo de todo o ano.
-
-### 8. 🗄️ Aba Banco (Schema)
-* **O que você vê:** Um guia interativo e educativo da modelagem de dados no Firebase Firestore, explicando a estrutura NoSQL das coleções (`pilares`, `categorias`, `atividades_cadastradas`, `registros_mensais`, `agendamentos`, `historico_atividades`).
-
----
-
-## PARTE 3: Manual Completo do Bot no Telegram
-
-O bot do Telegram permite que você mantenha seu sistema 100% atualizado com zero atrito, direto do seu celular.
-
-### 🔹 1. Comando `/feito` (Lançamento Rápido)
-Use para registrar um hábito que você acabou de realizar:
-```text
-/feito [categoria] [atividade] [quantidade]
-```
-* **Exemplos práticos:**
-  * `/feito corrida Parque 5` ➔ Registra 5 km de corrida no Parque e gera pontos imediatos para o pilar Atividade Física.
-  * `/feito leitura Habitos 30` ➔ Registra 30 páginas do livro Hábitos e pontua no pilar Estudos.
-  * `/feito futsal Pelada 1.5` ➔ Registra 1.5 horas de jogo de futebol.
-  * `/feito musculacao TreinoA 1` ➔ Registra 1 treino de musculação.
-
-### 🔹 2. Comando `/score`
-Exibe seu relatório consolidado de desempenho no mês atual:
-* Exibe a nota geral de 0 a 100.
-* Exibe a barra de status de cada Pilar (🟢 Verde se atingiu $\ge 80\%$, 🟡 Amarelo se $\ge 50\%$, 🔴 Vermelho se abaixo).
-
-### 🔹 3. Comando `/agenda` e `/agendamentos`
-* `/agenda` ➔ Exibe todas as tarefas e rotinas agendadas para **hoje**. Cada item vem acompanhado de um botão inline para você marcar como concluído com 1 toque!
-* `/agendamentos` ➔ Exibe todos os agendamentos pendentes futuros.
-
-### 🔹 4. Comando `/agendar [texto]`
-Cria um compromisso pontual no seu calendário:
-```text
-/agendar Dentista amanhã às 14h
-```
-
-### 🔹 5. Comando `/rotina`
-Abre um menu com botões interativos no Telegram para você escolher uma Categoria e agendar uma Atividade cadastrada para o seu dia.
-
-### 🔹 6. Comando `/nova_atividade`
-Inicia um assistente passo a passo no Telegram para cadastrar uma nova atividade com botões interativos.
-
-### 🔹 7. Comandos de Consulta
-* `/pilares` ➔ Lista os 5 Pilares, suas metas de pontos e pesos atuais.
-* `/categorias` ➔ Lista todas as categorias e regras de conversão.
-* `/atividades` ➔ Lista as atividades já cadastradas.
-
----
-
-## PARTE 4: Banco de Dados Firebase Firestore & Boas Práticas
-
-Os seus dados ficam armazenados na nuvem do **Google Cloud Firebase Firestore** (Projeto `rotina-94433`).
-
-### Principais Coleções:
-1. **`pilares`**: Documentos com IDs fixos (`pilar_atividade_fisica`, `pilar_estudos`, etc.) contendo pesos e metas.
-2. **`categorias`**: Categorias cadastradas com nome, unidade, fator de pontos e pilar pai.
-3. **`atividades_cadastradas`**: Atividades com a tríade de vínculo (`categoria_id`, `categoria_nome` e `pilar_id`).
-4. **`registros_mensais`**: Agrupamentos mensais com ID no formato `reg_ANO_MES_categoriaId` (ex: `reg_2026_09_cat_corrida`). Armazena o valor acumulado no mês e o desdobramento por atividade (`atividades_breakdown`).
-5. **`historico_atividades`**: Registros individuais de cada `/feito` com data/hora, quantidade e pontos gerados.
-6. **`agendamentos`**: Tarefas e eventos do calendário com status de conclusão.
-
-### Dicas de Boas Práticas:
-* **Não apague a história:** Em vez de excluir categorias antigas com meses de registros, edite o nome ou inative-a para manter seu histórico de anos anteriores intacto no Analytics.
-* **Consistência de Nomes:** Ao lançar `/feito corrida Parque 5`, use sempre o mesmo nome de atividade para que o sistema agrupe corretamente suas estatísticas.
-
+### Dicas de Ouro
+*   **Não apague a história:** Se você parou de fazer um curso, não exclua a categoria dele. Clique no lápis, marque como "Inativa" e salve. O histórico de pontos que você suou para conseguir permanecerá salvo!
+*   **Pilares "Fantasmas":** O pilar de "Trabalho" tem peso 0 e meta 0 de propósito. Ele serve para você lançar e registrar suas horas trabalhadas no Analytics, mas sem que o "Trabalhar muito" ou "Trabalhar pouco" afete a nota do seu esforço em construção de hábitos.

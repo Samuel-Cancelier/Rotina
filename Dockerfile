@@ -17,7 +17,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copia os arquivos do backend
-COPY bot.py database.py endpoints.py main.py .
+COPY bot.py database.py main.py .
 COPY chave-firebase.json* .
 
 # Executa com Gunicorn na porta exigida pelo Google Cloud Run

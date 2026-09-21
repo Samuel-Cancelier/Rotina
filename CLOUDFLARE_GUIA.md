@@ -56,7 +56,7 @@ rotina-metas/
 │       ├── firestore.ts           <-- Cliente REST Firestore (Web Crypto RS256)
 │       └── telegram.ts            <-- Processador de Comandos do Bot
 ├── frontend/                      <-- Painel React SPA (Vai para o Cloudflare Pages)
-└── docs/CLOUD_GUIA.md             <-- Este guia
+└── CLOUDFLARE_GUIA.md             <-- Este guia
 ```
 
 ---

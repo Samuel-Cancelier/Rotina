@@ -14,7 +14,6 @@ Comandos principais:
 """
 
 import os
-from datetime import datetime
 import telebot
 from telebot import types
 from dotenv import load_dotenv
@@ -28,10 +27,7 @@ from database import (
     cadastrar_atividade,
     listar_atividades_dict,
     registrar_feito,
-    calcular_score_geral,
-    listar_agendamentos,
-    cadastrar_agendamento,
-    atualizar_agendamento
+    calcular_score_geral
 )
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8949673934:AAEjhmDizSs0hbhhDVXDnNXf8fLr1PA1KlQ")
@@ -265,88 +261,6 @@ def salvar_atividade_callback(call):
     finally:
         if chat_id in user_sessions:
             del user_sessions[chat_id]
-
-# =====================================================================
-# 6. AGENDAMENTOS E AGENDA DO DIA
-# =====================================================================
-
-@bot.message_handler(commands=['agenda', 'agendamentos'])
-def ver_agenda(message):
-    try:
-        texto = message.text.strip().lower()
-        is_agenda_hoje = texto.startswith('/agenda') and not texto.startswith('/agendamentos')
-        hoje = datetime.now().strftime('%Y-%m-%d')
-
-        agends = listar_agendamentos()
-        pendentes = [a for a in agends if not a.get('concluido')]
-
-        if is_agenda_hoje:
-            pendentes = [a for a in pendentes if a.get('data') == hoje]
-
-        if not pendentes:
-            msg_vazia = "🎉 Nenhum agendamento pendente para hoje!" if is_agenda_hoje else "🎉 Nenhum agendamento pendente encontrado!"
-            bot.reply_to(message, msg_vazia)
-            return
-
-        markup = types.InlineKeyboardMarkup(row_width=1)
-        linhas = [f"📅 *Seus Agendamentos Pendentes{' (Hoje)' if is_agenda_hoje else ''}:*\n"]
-
-        for a in pendentes:
-            titulo = a.get('titulo', 'Sem título')
-            ag_id = a.get('id', '')
-            linhas.append(f"• {titulo}")
-            markup.add(
-                types.InlineKeyboardButton(
-                    f"✅ Concluir: {titulo[:24]}",
-                    callback_data=f"done_ag_{ag_id}"
-                )
-            )
-
-        bot.reply_to(message, "\n".join(linhas), reply_markup=markup, parse_mode="Markdown")
-    except Exception as e:
-        bot.reply_to(message, f"❌ Erro ao consultar agenda: {str(e)}")
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("done_ag_"))
-def concluir_agendamento_callback(call):
-    ag_id = call.data.replace("done_ag_", "")
-    try:
-        atualizar_agendamento(ag_id, {"concluido": True})
-        bot.answer_callback_query(call.id, "Tarefa marcada como concluída!")
-        bot.edit_message_text(
-            "✅ *Tarefa marcada como concluída no sistema!*",
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,
-            parse_mode="Markdown"
-        )
-    except Exception as e:
-        bot.answer_callback_query(call.id, f"Erro: {e}")
-
-@bot.message_handler(commands=['agendar'])
-def criar_agendamento_rapido(message):
-    texto = message.text.replace('/agendar', '').strip()
-    if not texto:
-        instrucao = (
-            "⚠️ *Como agendar um compromisso rápido:*\n\n"
-            "Envie no formato:\n"
-            "`/agendar [descrição do compromisso]`\n\n"
-            "*Exemplo:*\n"
-            "• `/agendar Reunião de equipe às 14h`\n"
-            "• `/agendar Dentista amanhã`"
-        )
-        bot.reply_to(message, instrucao, parse_mode="Markdown")
-        return
-
-    try:
-        hoje = datetime.now().strftime('%Y-%m-%d')
-        cadastrar_agendamento({
-            "tipo": "pontual",
-            "titulo": texto,
-            "data": hoje,
-            "concluido": False
-        })
-        bot.reply_to(message, f"✅ *Agendamento salvo com sucesso para hoje:*\n📌 `{texto}`", parse_mode="Markdown")
-    except Exception as e:
-        bot.reply_to(message, f"❌ Erro ao agendar: {str(e)}")
 
 # =====================================================================
 # INICIALIZAÇÃO CONTÍNUA (NUVEM OU LOCAL)

@@ -51,11 +51,9 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   // Modo de Análise: Semanal, Mensal ou Anual
   const [modoAnalise, setModoAnalise] = useState<ModoAnalise>('mensal');
 
-  // Sub-filtros dinâmicos
-  const anoAtual = new Date().getFullYear();
-  const mesAtual = new Date().getMonth() + 1;
+  // Sub-filtros
   const [semanaSelecionada, setSemanaSelecionada] = useState<'atual' | 'anterior'>('atual');
-  const [mesSelecionado, setMesSelecionado] = useState<number>(mesAtual);
+  const [mesSelecionado, setMesSelecionado] = useState<number>(9); // 9 = Setembro (Mês Atual)
   const [categoriaFoco, setCategoriaFoco] = useState<string>('cat_corrida');
 
   // Dados mockados e consistentes para análise semanal (Dias da Semana: Seg a Dom)
@@ -84,13 +82,13 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   // Filtragem dos registros conforme o modo de análise
   const registrosFiltrados = registrosMensais.filter((r) => {
     if (modoAnalise === 'anual') {
-      return r.ano === anoAtual;
+      return r.ano === 2026;
     }
     if (modoAnalise === 'mensal') {
-      return r.ano === anoAtual && r.mes === mesSelecionado;
+      return r.ano === 2026 && r.mes === mesSelecionado;
     }
-    // No modo semanal, pegamos o mês atual para extrair proporções da semana
-    return r.ano === anoAtual && r.mes === mesAtual;
+    // No modo semanal, pegamos o mês atual (Setembro) para extrair proporções da semana
+    return r.ano === 2026 && r.mes === 9;
   });
 
   // Totais consolidados para a visualização
@@ -182,14 +180,14 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     .reduce((acc, curr) => acc + curr.valor_total, 0);
 
   // Dados para o gráfico mensal (Jan a Setembro)
-  const dadosGraficoMensal = Array.from({ length: 12 }, (_, i) => {
+  const dadosGraficoMensal = Array.from({ length: 9 }, (_, i) => {
     const mesIndex = i + 1;
     const ponto: Record<string, any> = {
       mes: MESES_NOMES[i].substring(0, 3)
     };
 
     categorias.forEach((c) => {
-      const reg = registrosMensais.find((r) => r.ano === anoAtual && r.mes === mesIndex && r.categoria_id === c.id);
+      const reg = registrosMensais.find((r) => r.ano === 2026 && r.mes === mesIndex && r.categoria_id === c.id);
       ponto[c.nome] = reg ? reg.valor_total : 0;
     });
 
@@ -209,8 +207,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           </div>
           <h2 className="text-xl font-serif italic text-white mt-1">
             {modoAnalise === 'semanal' && 'Evolução Semanal (Dias da Semana & Metas Parciais)'}
-            {modoAnalise === 'mensal' && `Evolução Mensal (${MESES_NOMES[mesSelecionado - 1]} ${anoAtual})`}
-            {modoAnalise === 'anual' && `Balanço Geral Anual (Consolidado ${anoAtual} Completo)`}
+            {modoAnalise === 'mensal' && `Evolução Mensal (${MESES_NOMES[mesSelecionado - 1]} 2026)`}
+            {modoAnalise === 'anual' && 'Balanço Geral Anual (Consolidado 2026 Completo)'}
           </h2>
           <p className="text-xs text-[#888] mt-0.5">
             Selecione entre a visão semanal, mensal ou anual para acompanhar seus hábitos e metas.
@@ -323,14 +321,14 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                       : 'bg-[#141414] text-[#777] border border-[#242424] hover:text-white'
                   }`}
                 >
-                  {nome} {mesNum === mesAtual ? '(Atual)' : ''}
+                  {nome} {mesNum === 9 ? '(Atual)' : ''}
                 </button>
               );
             })}
           </div>
 
           <span className="text-[11px] font-mono text-[#888]">
-            Ano Base: <strong className="text-white">{anoAtual}</strong>
+            Ano Base: <strong className="text-white">2026</strong>
           </span>
         </div>
       )}
@@ -339,7 +337,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         <div className="bg-[#0f0f0f] border border-[#222] rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 font-mono text-[11px] text-[#aaa]">
             <Award className="w-4 h-4 text-amber-400" />
-            <span>Ano {anoAtual}: {mesAtual} meses registrados</span>
+            <span>Ano 2026: 9 meses registrados (Jan a Set)</span>
           </div>
           <span className="text-[11px] font-mono text-emerald-400">
             ✓ Metas anuais ajustadas proporcionalmente para 12 meses
@@ -353,7 +351,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         <div className="bg-[#121212] border border-[#222] rounded-2xl p-4.5 relative overflow-hidden">
           <div className="flex items-center justify-between text-xs text-[#888]">
             <span className="font-mono text-[11px] uppercase tracking-wider">
-              {modoAnalise === 'semanal' ? 'Corrida (Semana)' : modoAnalise === 'mensal' ? `Corrida (${MESES_NOMES[mesSelecionado - 1]})` : `Corrida (Ano ${anoAtual})`}
+              {modoAnalise === 'semanal' ? 'Corrida (Semana)' : modoAnalise === 'mensal' ? `Corrida (${MESES_NOMES[mesSelecionado - 1]})` : 'Corrida (Ano 2026)'}
             </span>
             <span className="w-2 h-2 rounded-full bg-red-500"></span>
           </div>
@@ -376,7 +374,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         <div className="bg-[#121212] border border-[#222] rounded-2xl p-4.5 relative overflow-hidden">
           <div className="flex items-center justify-between text-xs text-[#888]">
             <span className="font-mono text-[11px] uppercase tracking-wider">
-              {modoAnalise === 'semanal' ? 'Futsal (Semana)' : modoAnalise === 'mensal' ? `Futsal (${MESES_NOMES[mesSelecionado - 1]})` : `Futsal (Ano ${anoAtual})`}
+              {modoAnalise === 'semanal' ? 'Futsal (Semana)' : modoAnalise === 'mensal' ? `Futsal (${MESES_NOMES[mesSelecionado - 1]})` : 'Futsal (Ano 2026)'}
             </span>
             <span className="w-2 h-2 rounded-full bg-blue-500"></span>
           </div>
@@ -399,7 +397,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         <div className="bg-[#121212] border border-[#222] rounded-2xl p-4.5 relative overflow-hidden">
           <div className="flex items-center justify-between text-xs text-[#888]">
             <span className="font-mono text-[11px] uppercase tracking-wider">
-              {modoAnalise === 'semanal' ? 'Leitura (Semana)' : modoAnalise === 'mensal' ? `Leitura (${MESES_NOMES[mesSelecionado - 1]})` : `Leitura (Ano ${anoAtual})`}
+              {modoAnalise === 'semanal' ? 'Leitura (Semana)' : modoAnalise === 'mensal' ? `Leitura (${MESES_NOMES[mesSelecionado - 1]})` : 'Leitura (Ano 2026)'}
             </span>
             <span className="w-2 h-2 rounded-full bg-pink-500"></span>
           </div>
@@ -446,8 +444,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               <BarChart3 className="w-4 h-4 text-amber-400" />
               <h3 className="text-base font-serif italic text-white">
                 {modoAnalise === 'semanal' && 'Gráfico Diário da Semana (Segunda a Domingo)'}
-                {modoAnalise === 'mensal' && `Comparativo de Evolução Mês a Mês (${anoAtual})`}
-                {modoAnalise === 'anual' && `Histórico Acumulado Anual por Mês (Ano ${anoAtual})`}
+                {modoAnalise === 'mensal' && 'Comparativo de Evolução Mês a Mês (2026)'}
+                {modoAnalise === 'anual' && 'Histórico Acumulado Anual por Mês (Jan a Setembro)'}
               </h3>
             </div>
             <p className="text-xs text-[#777] mt-0.5">
@@ -460,7 +458,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           <span className="text-[11px] font-mono px-2.5 py-1 rounded bg-[#181818] border border-[#2a2a2a] text-amber-400 self-start sm:self-auto">
             {modoAnalise === 'semanal'
               ? `Total Semana: ${dadosGraficoSemanal.reduce((a, c) => a + c.Corrida, 0)} km corrida`
-              : `Total ${anoAtual}: ${totalCorridaAno} km corrida`}
+              : `Total 2026: ${totalCorridaAno} km corrida`}
           </span>
         </div>
 
@@ -505,7 +503,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <div className="flex items-center gap-2.5">
               <Layers className="w-4 h-4 text-amber-400" />
               <h3 className="text-base font-serif italic text-white">
-                Metas no Período ({modoAnalise === 'semanal' ? 'Semana' : modoAnalise === 'mensal' ? MESES_NOMES[mesSelecionado - 1] : `Ano ${anoAtual}`})
+                Metas no Período ({modoAnalise === 'semanal' ? 'Semana' : modoAnalise === 'mensal' ? MESES_NOMES[mesSelecionado - 1] : 'Ano 2026'})
               </h3>
             </div>
             <span className="text-[11px] font-mono text-[#777]">

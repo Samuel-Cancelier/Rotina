@@ -119,9 +119,48 @@ def register_endpoints(app):
     # -------------------------------------------------------------
     @app.route("/api/registros_mensais", methods=["GET"])
     def api_registros():
-        ano = request.args.get("ano", type=int)
-        mes = request.args.get("mes", type=int)
-        return jsonify(database.listar_registros_mensais(ano=ano, mes=mes)), 200
+        agora = datetime.datetime.now()
+        return jsonify(database.listar_registros_mensais(ano=agora.year, mes=agora.month)), 200
+
+    # -------------------------------------------------------------
+    # HISTÓRICO DE ATIVIDADES
+    # -------------------------------------------------------------
+    @app.route("/api/historico_atividades", methods=["GET"])
+    def api_historico():
+        historico = database.listar_historico_atividades()
+        return jsonify(historico), 200
+
+    @app.route("/api/historico_atividades", methods=["POST"])
+    def api_criar_historico():
+        dados = request.get_json() or {}
+        categoria_id = dados.get("categoria_id")
+        atividade_nome = dados.get("atividade_nome")
+        valor = dados.get("valor")
+
+        if not categoria_id or not atividade_nome or valor is None:
+            return jsonify({"erro": "categoria_id, atividade_nome e valor sao obrigatorios"}), 400
+        
+        try:
+            # registrar_feito automatically handles adding to historico and updating monthly records
+            res = database.registrar_feito(categoria_id, atividade_nome, float(valor))
+            return jsonify({"status": "criado", "resultado": res}), 201
+        except Exception as e:
+            return jsonify({"erro": str(e)}), 400
+
+    @app.route("/api/historico_atividades/<id>", methods=["DELETE"])
+    def api_excluir_historico(id):
+        sucesso = database.excluir_historico_atividade(id)
+        if sucesso:
+            return jsonify({"status": "excluido", "historico_id": id}), 200
+        return jsonify({"erro": "Falha ao excluir historico"}), 400
+
+    @app.route("/api/historico_atividades/<id>", methods=["PUT"])
+    def api_atualizar_historico(id):
+        dados = request.get_json() or {}
+        sucesso = database.atualizar_historico_atividade(id, dados)
+        if sucesso:
+            return jsonify({"status": "sucesso", "historico_id": id}), 200
+        return jsonify({"erro": "Falha ao atualizar historico"}), 400
 
     # -------------------------------------------------------------
     # AGENDAMENTOS E EVENTOS DE CALENDÁRIO
@@ -150,42 +189,3 @@ def register_endpoints(app):
         if sucesso:
             return jsonify({"status": "excluido", "agendamento_id": id}), 200
         return jsonify({"erro": "Falha ao excluir agendamento"}), 400
-
-    # -------------------------------------------------------------
-    # HISTÓRICO DE ATIVIDADES E LANÇAMENTOS RÁPIDOS
-    # -------------------------------------------------------------
-    @app.route("/api/historico_atividades", methods=["GET"])
-    def api_historico():
-        return jsonify(database.listar_historico_atividades()), 200
-
-    @app.route("/api/historico_atividades", methods=["POST"])
-    def api_criar_historico():
-        dados = request.get_json() or {}
-        categoria_id = dados.get("categoria_id")
-        atividade_nome = dados.get("atividade_nome")
-        valor = dados.get("valor")
-
-        if not categoria_id or not atividade_nome or valor is None:
-            return jsonify({"erro": "categoria_id, atividade_nome e valor são obrigatórios"}), 400
-
-        try:
-            hist_id = database.cadastrar_historico_atividade(dados)
-            return jsonify({"status": "criado", "id": hist_id}), 201
-        except Exception as e:
-            return jsonify({"erro": str(e)}), 400
-
-    @app.route("/api/historico_atividades/<id>", methods=["PUT"])
-    def api_atualizar_historico(id):
-        dados = request.get_json() or {}
-        sucesso = database.atualizar_historico_atividade(id, dados)
-        if sucesso:
-            return jsonify({"status": "sucesso", "historico_id": id}), 200
-        return jsonify({"erro": "Falha ao atualizar histórico"}), 400
-
-    @app.route("/api/historico_atividades/<id>", methods=["DELETE"])
-    def api_excluir_historico(id):
-        sucesso = database.excluir_historico_atividade(id)
-        if sucesso:
-            return jsonify({"status": "excluido", "historico_id": id}), 200
-        return jsonify({"erro": "Falha ao excluir histórico"}), 400
-

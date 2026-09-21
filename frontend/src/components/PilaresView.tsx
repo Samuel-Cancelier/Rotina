@@ -48,13 +48,8 @@ export const PilaresView: React.FC<PilaresViewProps> = ({
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [editCatPontosPorUnidade, setEditCatPontosPorUnidade] = useState<number>(0);
 
-  // Registros do mês atual (dinâmico)
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
-  const mesNomeAtual = new Date().toLocaleDateString('pt-BR', { month: 'long' });
-  const mesFormatado = mesNomeAtual.charAt(0).toUpperCase() + mesNomeAtual.slice(1);
-
-  const registrosMesAtual = registrosMensais.filter((r) => r.ano === currentYear && r.mes === currentMonth);
+  // Registros do mês atual (Setembro 2026)
+  const registrosSetembro = registrosMensais.filter((r) => r.ano === 2026 && r.mes === 9);
 
   // Cálculo consolidado de pontos por pilar
   const pilaresCalculados = pilares.map((pilar) => {
@@ -62,7 +57,7 @@ export const PilaresView: React.FC<PilaresViewProps> = ({
 
     let totalPontosPilar = 0;
     const detalheCategorias = catsDoPilar.map((cat) => {
-      const reg = registrosMesAtual.find((r) => r.categoria_id === cat.id);
+      const reg = registrosSetembro.find((r) => r.categoria_id === cat.id);
       const qtdRealizada = reg ? reg.valor_total : 0;
       const pontosGerados = Number((qtdRealizada * cat.pontos_por_unidade).toFixed(1));
       totalPontosPilar += pontosGerados;
@@ -192,7 +187,7 @@ export const PilaresView: React.FC<PilaresViewProps> = ({
           <div className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-amber-400" />
             <h3 className="text-base font-serif italic text-white">
-              Pontuação Conquistada vs Meta Mensal em Pontos ({mesFormatado} {currentYear})
+              Pontuação Conquistada vs Meta Mensal em Pontos (Setembro 2026)
             </h3>
           </div>
           <span className="text-[11px] font-mono text-[#888]">

@@ -8,7 +8,11 @@ import { TelegramSimulator } from './components/TelegramSimulator';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { FirestoreSchemaView } from './components/FirestoreSchemaView';
 import { HistoricoView, HistoricoAtividade } from './components/HistoricoView';
-import { PILARES_INICIAIS, CATEGORIAS_INICIAIS, CORES_PILARES } from './data/initialData';
+import {
+  PILARES_INICIAIS,
+  CATEGORIAS_INICIAIS,
+  CORES_PILARES
+} from './data/initialData';
 import {
   Pilar,
   Categoria,
@@ -22,8 +26,7 @@ import {
 // Base da API (vazio para caminhos relativos locais ou URL do Cloudflare Worker)
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
-
-// Wrapper para injetar o Token de Autenticação
+// Wrapper para requisições na API local ou remota
 const apiFetch = (url: string, options: RequestInit = {}) => {
   const token = localStorage.getItem("API_SECRET_KEY");
   const headers = new Headers(options.headers || {});
@@ -37,52 +40,116 @@ const apiFetch = (url: string, options: RequestInit = {}) => {
 };
 
 export default function App() {
-  const [isAuth, setIsAuth] = useState(!!localStorage.getItem("API_SECRET_KEY"));
-  const [tokenInput, setTokenInput] = useState("");
-
-  if (!isAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] text-[#d4d4d4] font-[Plus_Jakarta_Sans]">
-        <div className="p-8 bg-[#171717] rounded-xl shadow-2xl border border-neutral-800 max-w-sm w-full">
-          <h1 className="text-2xl font-semibold mb-4 text-white">Acesso Restrito</h1>
-          <p className="text-sm text-neutral-400 mb-6">Por favor, insira a chave de acesso da API para continuar.</p>
-          <input 
-            type="password"
-            className="w-full bg-[#262626] border border-neutral-700 rounded-lg px-4 py-3 text-white mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Sua chave secreta..."
-            value={tokenInput}
-            onChange={(e) => setTokenInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                localStorage.setItem("API_SECRET_KEY", tokenInput);
-                setIsAuth(true);
-              }
-            }}
-          />
-          <button 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors"
-            onClick={() => {
-              localStorage.setItem("API_SECRET_KEY", tokenInput);
-              setIsAuth(true);
-            }}
-          >
-            Acessar Painel
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   const [activeTab, setActiveTab] = useState<AppTab>('pilares');
-  const [pilares, setPilares] = useState<Pilar[]>(PILARES_INICIAIS);
-  const [categorias, setCategorias] = useState<Categoria[]>(CATEGORIAS_INICIAIS);
-  const [atividades, setAtividades] = useState<AtividadeCadastrada[]>([]);
-  const [registrosMensais, setRegistrosMensais] = useState<RegistroMensalCategoria[]>([]);
-  const [agendamentos, setAgendamentos] = useState<AgendamentoItem[]>([]);
-  const [metas, setMetas] = useState<MetaCategoria[]>([]);
-  const [historico, setHistorico] = useState<HistoricoAtividade[]>([]);
 
-  // Sincronização periódica com a API local / Firestore / Cloudflare Worker
+  // Estado com persistência em LocalStorage: apenas Pilares e Categorias vêm pré-configurados
+  const [pilares, setPilares] = useState<Pilar[]>(() => {
+    const saved = localStorage.getItem('rotina_pilares');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+    return PILARES_INICIAIS;
+  });
+
+  const [categorias, setCategorias] = useState<Categoria[]>(() => {
+    const saved = localStorage.getItem('rotina_categorias');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+    return CATEGORIAS_INICIAIS;
+  });
+
+  const [atividades, setAtividades] = useState<AtividadeCadastrada[]>(() => {
+    const saved = localStorage.getItem('rotina_atividades');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  });
+
+  const [registrosMensais, setRegistrosMensais] = useState<RegistroMensalCategoria[]>(() => {
+    const saved = localStorage.getItem('rotina_registros_mensais');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  });
+
+  const [agendamentos, setAgendamentos] = useState<AgendamentoItem[]>(() => {
+    const saved = localStorage.getItem('rotina_agendamentos');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  });
+
+  const [metas, setMetas] = useState<MetaCategoria[]>(() => {
+    const saved = localStorage.getItem('rotina_metas');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  });
+
+  const [historico, setHistorico] = useState<HistoricoAtividade[]>(() => {
+    const saved = localStorage.getItem('rotina_historico');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  });
+
+  // Salva no LocalStorage sempre que o estado muda
+  useEffect(() => {
+    localStorage.setItem('rotina_pilares', JSON.stringify(pilares));
+  }, [pilares]);
+
+  useEffect(() => {
+    localStorage.setItem('rotina_categorias', JSON.stringify(categorias));
+  }, [categorias]);
+
+  useEffect(() => {
+    localStorage.setItem('rotina_atividades', JSON.stringify(atividades));
+  }, [atividades]);
+
+  useEffect(() => {
+    localStorage.setItem('rotina_registros_mensais', JSON.stringify(registrosMensais));
+  }, [registrosMensais]);
+
+  useEffect(() => {
+    localStorage.setItem('rotina_agendamentos', JSON.stringify(agendamentos));
+  }, [agendamentos]);
+
+  useEffect(() => {
+    localStorage.setItem('rotina_metas', JSON.stringify(metas));
+  }, [metas]);
+
+  useEffect(() => {
+    localStorage.setItem('rotina_historico', JSON.stringify(historico));
+  }, [historico]);
+
+  // Sincronização resiliente com a API local / Firestore / Cloudflare Worker (se ativo)
   const fetchData = async () => {
     try {
       const [pilaresRes, catsRes, ativsRes, regsRes, agendsRes, histRes] = await Promise.all([
@@ -110,19 +177,19 @@ export default function App() {
       }
       if (ativsRes && ativsRes.ok) {
         const a = await ativsRes.json();
-        if (Array.isArray(a)) setAtividades(a);
+        if (Array.isArray(a) && a.length > 0) setAtividades(a);
       }
       if (regsRes && regsRes.ok) {
         const r = await regsRes.json();
-        if (Array.isArray(r)) setRegistrosMensais(r);
+        if (Array.isArray(r) && r.length > 0) setRegistrosMensais(r);
       }
       if (agendsRes && agendsRes.ok) {
         const ag = await agendsRes.json();
-        if (Array.isArray(ag)) setAgendamentos(ag);
+        if (Array.isArray(ag) && ag.length > 0) setAgendamentos(ag);
       }
       if (histRes && histRes.ok) {
         const h = await histRes.json();
-        if (Array.isArray(h)) setHistorico(h);
+        if (Array.isArray(h) && h.length > 0) setHistorico(h);
       }
     } catch {
       // Ignora silenciosamente quando o backend local ainda não iniciou
@@ -131,7 +198,7 @@ export default function App() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 4000);
+    const interval = setInterval(fetchData, 8000);
     return () => clearInterval(interval);
   }, []);
 
@@ -265,46 +332,196 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ concluido: novoStatus })
       }).catch((err) => console.error("Erro ao atualizar status agendamento:", err));
+
+      if (novoStatus && itemAlvo.categoria_id) {
+        handleRegistrarFeito(itemAlvo.categoria_id, itemAlvo.titulo, 1);
+      }
     }
   };
 
   const handleRegistrarFeito = (catNomeOrId: string, ativNome: string, valor: number) => {
-    return { pontos: 10, pilarNome: 'Registrado' };
+    const term = catNomeOrId.toLowerCase().trim();
+    const cat = categorias.find(
+      (c) => c.id.toLowerCase() === term || c.nome.toLowerCase().includes(term)
+    );
+    const pilar = pilares.find((p) => p.id === cat?.pilar_id);
+    const pilarNome = pilar?.nome || 'Geral';
+    const pontos = cat ? Number((valor * cat.pontos_por_unidade).toFixed(1)) : Number((valor * 10).toFixed(1));
+    const catId = cat ? cat.id : 'cat_diversos';
+    const catNome = cat ? cat.nome : catNomeOrId;
+    const unidade = cat ? cat.unidade_padrao : 'un';
+
+    const now = new Date();
+    const ano = now.getFullYear();
+    const mes = now.getMonth() + 1;
+    const dataHoraStr = `${now.toISOString().split('T')[0]} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    // 1. Registra no Histórico
+    const novoHist: HistoricoAtividade = {
+      id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      categoria_id: catId,
+      categoria_nome: catNome,
+      atividade_nome: ativNome,
+      valor: valor,
+      valor_unidade: valor,
+      unidade: unidade,
+      pontos_gerados: pontos,
+      data_registro: dataHoraStr,
+      ano: ano,
+      mes: mes
+    };
+    setHistorico((prev) => [novoHist, ...prev]);
+
+    // 2. Atualiza registros mensais da categoria
+    setRegistrosMensais((prev) => {
+      const idx = prev.findIndex((r) => r.categoria_id === catId && r.ano === ano && r.mes === mes);
+      if (idx >= 0) {
+        const existente = prev[idx];
+        const breakdown = { ...(existente.atividades_breakdown || {}) };
+        breakdown[ativNome] = Number(((breakdown[ativNome] || 0) + valor).toFixed(1));
+        const atualizado: RegistroMensalCategoria = {
+          ...existente,
+          valor_total: Number((existente.valor_total + valor).toFixed(1)),
+          atividades_breakdown: breakdown,
+          atualizado_em: now.toISOString().split('T')[0]
+        };
+        const copia = [...prev];
+        copia[idx] = atualizado;
+        return copia;
+      } else {
+        const novoReg: RegistroMensalCategoria = {
+          id: `reg_${ano}_${mes}_${catId}`,
+          ano,
+          mes,
+          categoria_id: catId,
+          categoria_nome: catNome,
+          pilar_id: cat?.pilar_id || 'pilar_diversos',
+          valor_total: valor,
+          unidade: unidade,
+          atividades_breakdown: { [ativNome]: valor },
+          atualizado_em: now.toISOString().split('T')[0]
+        };
+        return [novoReg, ...prev];
+      }
+    });
+
+    apiFetch(`${API_BASE}/api/historico_atividades`, {
+      method: 'POST',
+      body: JSON.stringify(novoHist)
+    }).catch(() => {});
+
+    return { pontos, pilarNome };
+  };
+
+  const handleAgendarPontual = (hora: string, titulo: string) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const novo: AgendamentoItem = {
+      id: `ag_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      tipo: 'pontual',
+      titulo: titulo,
+      data: todayStr,
+      hora_inicio: hora,
+      concluido: false
+    };
+    handleAddAgendamento(novo);
+  };
+
+  const handleLimparExemplos = () => {
+    setAgendamentos([]);
+  };
+
+  const handleSyncGoogleCalendar = () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const gEvent: AgendamentoItem = {
+      id: `gcal_${Date.now()}`,
+      tipo: 'google_agenda',
+      titulo: 'Reunião com Diretoria (Google Agenda)',
+      data: todayStr,
+      hora_inicio: '10:00',
+      hora_fim: '11:00',
+      local: 'Google Meet',
+      concluido: false
+    };
+    setAgendamentos((prev) => [gEvent, ...prev]);
   };
 
   const handleAddHistorico = async (dados: any) => {
-    try {
-      await apiFetch(`${API_BASE}/api/historico_atividades`, {
-        method: 'POST',
-        body: JSON.stringify(dados)
-      });
-      fetchData(); // Atualiza tudo
-    } catch (e) {
-      console.error(e);
-    }
+    const now = new Date();
+    const ano = dados.ano || now.getFullYear();
+    const mes = dados.mes || (now.getMonth() + 1);
+    const cat = categorias.find((c) => c.id === dados.categoria_id);
+    const valor = parseFloat(dados.valor) || 1;
+    const pontos = cat ? Number((valor * cat.pontos_por_unidade).toFixed(1)) : 0;
+    const dataHoraStr = dados.data_registro || `${now.toISOString().split('T')[0]} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const novoHist: HistoricoAtividade = {
+      id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      categoria_id: dados.categoria_id,
+      categoria_nome: cat?.nome || 'Categoria',
+      atividade_nome: dados.atividade_nome || 'Atividade',
+      valor: valor,
+      valor_unidade: valor,
+      unidade: cat?.unidade_padrao || 'un',
+      pontos_gerados: pontos,
+      data_registro: dataHoraStr,
+      ano: ano,
+      mes: mes
+    };
+
+    setHistorico((prev) => [novoHist, ...prev]);
+
+    setRegistrosMensais((prev) => {
+      const idx = prev.findIndex((r) => r.categoria_id === dados.categoria_id && r.ano === ano && r.mes === mes);
+      if (idx >= 0) {
+        const existente = prev[idx];
+        const breakdown = { ...(existente.atividades_breakdown || {}) };
+        const ativNome = dados.atividade_nome || 'Atividade';
+        breakdown[ativNome] = Number(((breakdown[ativNome] || 0) + valor).toFixed(1));
+        const atualizado: RegistroMensalCategoria = {
+          ...existente,
+          valor_total: Number((existente.valor_total + valor).toFixed(1)),
+          atividades_breakdown: breakdown,
+          atualizado_em: now.toISOString().split('T')[0]
+        };
+        const copia = [...prev];
+        copia[idx] = atualizado;
+        return copia;
+      } else {
+        const novoReg: RegistroMensalCategoria = {
+          id: `reg_${ano}_${mes}_${dados.categoria_id}`,
+          ano,
+          mes,
+          categoria_id: dados.categoria_id,
+          categoria_nome: cat?.nome || 'Categoria',
+          pilar_id: cat?.pilar_id || 'pilar_diversos',
+          valor_total: valor,
+          unidade: cat?.unidade_padrao || 'un',
+          atividades_breakdown: { [dados.atividade_nome || 'Atividade']: valor },
+          atualizado_em: now.toISOString().split('T')[0]
+        };
+        return [novoReg, ...prev];
+      }
+    });
+
+    apiFetch(`${API_BASE}/api/historico_atividades`, {
+      method: 'POST',
+      body: JSON.stringify(novoHist)
+    }).catch(() => {});
   };
 
   const handleUpdateHistorico = async (id: string, dados: any) => {
-    try {
-      await apiFetch(`${API_BASE}/api/historico_atividades/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(dados)
-      });
-      fetchData();
-    } catch (e) {
-      console.error(e);
-    }
+    setHistorico((prev) => prev.map((h) => (h.id === id ? { ...h, ...dados } : h)));
+    apiFetch(`${API_BASE}/api/historico_atividades/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(dados)
+    }).catch(() => {});
   };
 
   const handleDeleteHistorico = async (id: string) => {
-    try {
-      await apiFetch(`${API_BASE}/api/historico_atividades/${id}`, {
-        method: 'DELETE'
-      });
-      fetchData();
-    } catch (e) {
-      console.error(e);
-    }
+    setHistorico((prev) => prev.filter((h) => h.id !== id));
+    apiFetch(`${API_BASE}/api/historico_atividades/${id}`, {
+      method: 'DELETE'
+    }).catch(() => {});
   };
 
   // Cálculo básico do Score Geral
@@ -381,6 +598,8 @@ export default function App() {
             onToggleConcluido={handleToggleConcluido}
             onDeleteAgendamento={handleDeleteAgendamento}
             onAddHistorico={handleAddHistorico}
+            onLimparExemplos={handleLimparExemplos}
+            onSyncGoogleCalendar={handleSyncGoogleCalendar}
           />
         )}
         {activeTab === 'historico' && (
@@ -400,7 +619,7 @@ export default function App() {
             atividades={atividades}
             onAddAtividadeFromBot={handleAddAtividade}
             onRegistrarFeito={handleRegistrarFeito}
-            onAgendarPontual={() => {}}
+            onAgendarPontual={handleAgendarPontual}
           />
         )}
         {activeTab === 'analytics' && (
