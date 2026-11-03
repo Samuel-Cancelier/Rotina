@@ -50,6 +50,35 @@ export function encontrarCategoria(tag: string, categorias: Categoria[]): Catego
   );
 }
 
+/** Tenta identificar a categoria por tag [Tag] ou por palavras-chave presentes no título/descrição */
+export function identificarCategoria(titulo: string, descricao: string | undefined, categorias: Categoria[]): { cat: Categoria | undefined; tag: string | null; resto: string } {
+  // 1. Tenta extrair [Tag] no início
+  const extraido = extrairTag(titulo);
+  if (extraido) {
+    const cat = encontrarCategoria(extraido.tag, categorias);
+    return { cat, tag: extraido.tag, resto: extraido.resto };
+  }
+
+  // 2. Se não tem colchetes, busca por correspondência de palavras no título ou descrição
+  const textoNorm = normalizar(`${titulo} ${descricao || ''}`);
+  for (const c of categorias) {
+    if (c.inativa || c.id === 'cat_geral') continue;
+    const palavras = [c.tag, c.nome, ...(c.aliases || [])].map(normalizar);
+    for (const p of palavras) {
+      if (p.length >= 3) {
+        const regex = new RegExp(`\\b${p}\\b`, 'i');
+        if (regex.test(textoNorm) || textoNorm.includes(p)) {
+          return { cat: c, tag: c.tag, resto: titulo };
+        }
+      }
+    }
+  }
+
+  // 3. Se não casou com nenhuma específica, usa Compromissos Gerais (se existir)
+  const catGeral = categorias.find((c) => c.id === 'cat_geral');
+  return { cat: catGeral, tag: null, resto: titulo };
+}
+
 const RE_QTD = /(\d+(?:[.,]\d+)?)\s*(km|p[áa]ginas?|p[áa]gs?\.?|min(?:utos)?|h(?:oras?)?)(?![a-z])/i;
 
 function unidadeCanonica(u: string): string {
@@ -235,9 +264,8 @@ export function useAgenda(categorias: Categoria[], nomeCalendario: string) {
 
         let ids = selecionados.filter((id) => cals.some((c) => c.id === id));
         if (ids.length === 0) {
-          // Padrão: calendário dedicado ("Rotina") + principal
-          const alvo = normalizar(nomeCalendario || 'Rotina');
-          ids = cals.filter((c) => normalizar(c.nome) === alvo || c.primario).map((c) => c.id);
+          // Padrão: lê TODOS os calendários da conta pessoal do Google
+          ids = cals.map((c) => c.id);
           setSelecionados(ids);
         }
 
@@ -320,30 +348,30 @@ export function useAgenda(categorias: Categoria[], nomeCalendario: string) {
     else setToken(null);
   }, [carregar]);
 
-  // Interpreta eventos -> categorias (recalcula quando categorias mudam)
+  // Interpreta TODOS os eventos da Google Agenda -> categorias
   const eventos = useMemo<EventoAgenda[]>(() => {
     const vistos = new Set<string>();
     const lista: EventoAgenda[] = [];
     for (const b of brutos) {
-      const t = extrairTag(b.titulo);
-      if (!t) continue;
       const chave = `${b.id}`;
       if (vistos.has(chave)) continue; // mesmo evento em dois calendários
       vistos.add(chave);
-      const cat = encontrarCategoria(t.tag, categorias);
+
+      // Identifica categoria por [Tag] ou por termos chave no título/descrição
+      const { cat, tag, resto } = identificarCategoria(b.titulo, b.descricao, categorias);
       const ini = new Date(b.inicio);
       const ev: EventoAgenda = {
         ref_id: `gcal:${b.id}`,
         calendario_id: b.calendario_id,
         titulo: b.titulo,
-        tag: t.tag,
-        categoria_id: cat?.id || null,
+        tag: tag,
+        categoria_id: cat?.id || 'cat_geral',
         data: b.dia_inteiro ? b.inicio.slice(0, 10) : ymd(ini),
         hora: b.dia_inteiro ? undefined : hhmm(ini),
         inicio: b.inicio,
         fim: b.fim,
         dia_inteiro: b.dia_inteiro,
-        valor_planejado: cat ? extrairValor(`${t.resto} ${b.descricao || ''}`, cat.unidade) : null,
+        valor_planejado: cat ? extrairValor(`${resto} ${b.descricao || ''}`, cat.unidade) : null,
         descricao: b.descricao
       };
       lista.push(ev);
