@@ -119,7 +119,11 @@ export function valorSugerido(ev: EventoAgenda, cat?: Categoria): number {
 // ---------- Token / OAuth ----------
 
 export function getClientId(): string {
-  return (localStorage.getItem(CHAVE_CLIENT_ID) || import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+  return (
+    localStorage.getItem(CHAVE_CLIENT_ID) ||
+    import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+    '909333020077-eck15tpj8ag5o0uql4a92m70bm4rmbnq.apps.googleusercontent.com'
+  ).trim();
 }
 
 export function setClientId(id: string) {

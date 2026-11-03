@@ -51,7 +51,7 @@ export const ConfigView: React.FC<ConfigViewProps> = ({
   const [secaoAtiva, setSecaoAtiva] = useState<'agenda' | 'categorias' | 'pilares' | 'objetivos' | 'contexto' | 'nuvem'>('agenda');
 
   // Estado local para Client ID do Google
-  const [clientIdInput, setClientIdInput] = useState<string>(() => localStorage.getItem('rotina2_google_client_id') || '');
+  const [clientIdInput, setClientIdInput] = useState<string>(() => localStorage.getItem('rotina2_google_client_id') || '909333020077-eck15tpj8ag5o0uql4a92m70bm4rmbnq.apps.googleusercontent.com');
   const [nomeCalendarioInput, setNomeCalendarioInput] = useState<string>(config.nome_calendario || 'Rotina');
   const [contextoInput, setContextoInput] = useState<string>(config.contexto || '');
 
