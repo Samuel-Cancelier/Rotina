@@ -45,7 +45,7 @@ export interface Categoria {
   inativa?: boolean;
 }
 
-export type StatusRegistro = 'feito' | 'parcial' | 'nao_feito' | 'remarcado';
+export type StatusRegistro = 'feito' | 'parcial' | 'nao_feito' | 'remarcado' | 'ignorado';
 export type OrigemRegistro = 'agenda' | 'plano' | 'manual';
 
 export const MOTIVOS = [

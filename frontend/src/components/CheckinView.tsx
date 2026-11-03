@@ -7,10 +7,12 @@ import {
   Plus,
   Calendar,
   Clock,
-  Sparkles,
   AlertCircle,
-  HelpCircle,
-  MessageSquare
+  EyeOff,
+  Tag,
+  MessageSquare,
+  Sparkles,
+  ChevronDown
 } from 'lucide-react';
 import { Categoria, ItemPlanejado, MOTIVOS, Pilar, Registro, StatusRegistro } from '../types';
 import { ddmm, hoje, novoId, rotuloRelativo } from '../lib/datas';
@@ -52,10 +54,21 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
   const regsPorRef = new Map(registros.filter((r) => r.ref_id).map((r) => [r.ref_id!, r]));
 
   // Itens pendentes de resposta (que já terminaram ou são de dias passados)
-  const pendentes = planejados.filter((item) => {
+  const pendentesGeral = planejados.filter((item) => {
     const jaRespondido = regsPorRef.has(item.ref_id);
     return !jaRespondido && (item.terminou || item.data < h);
   });
+
+  // SEPARAÇÃO SOLICITADA PELO USUÁRIO:
+  // 1. O que é Rotina de verdade (identificado por tag ou categoria específica configurada)
+  const pendentesRotina = pendentesGeral.filter(
+    (item) => item.categoria_id && item.categoria_id !== 'cat_geral'
+  );
+
+  // 2. O que são outros eventos soltos da agenda (F1, Finados, lembretes, compromissos avulsos)
+  const pendentesOutros = pendentesGeral.filter(
+    (item) => !item.categoria_id || item.categoria_id === 'cat_geral'
+  );
 
   // Itens planejados para hoje ainda por acontecer
   const futurosHoje = planejados.filter((item) => {
@@ -74,6 +87,7 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
   const [valorInput, setValorInput] = useState<number>(1);
   const [motivoInput, setMotivoInput] = useState<string>('');
   const [notaInput, setNotaInput] = useState<string>('');
+  const [categoriaEscolhidaId, setCategoriaEscolhidaId] = useState<string>('');
 
   // Lançamento livre (fora da agenda)
   const [mostrarForaAgenda, setMostrarForaAgenda] = useState(false);
@@ -89,16 +103,28 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
     setValorInput(item.valor_sugerido || cat?.valor_padrao || 1);
     setMotivoInput('');
     setNotaInput('');
+    // Se o item já tem categoria de rotina, usa ela; se for geral/vazia, deixa vazio para ele escolher se quiser
+    setCategoriaEscolhidaId(
+      item.categoria_id && item.categoria_id !== 'cat_geral' ? item.categoria_id : ''
+    );
   };
 
   const confirmarResposta = () => {
     if (!itemAtivo) return;
-    const cat = categorias.find((c) => c.id === itemAtivo.categoria_id);
+
+    // Se o usuário selecionou uma categoria no modal para um evento solto, usa ela!
+    const finalCatId =
+      categoriaEscolhidaId ||
+      itemAtivo.categoria_id ||
+      'cat_geral';
+
+    const cat = categorias.find((c) => c.id === finalCatId);
+
     const novoReg: Registro = {
       id: novoId('reg'),
       data: itemAtivo.data,
       hora: itemAtivo.hora,
-      categoria_id: itemAtivo.categoria_id || 'cat_diversos',
+      categoria_id: finalCatId,
       status: statusAtivo,
       valor: statusAtivo === 'nao_feito' ? 0 : Number(valorInput) || 0,
       unidade: cat?.unidade || 'un',
@@ -111,6 +137,28 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
     };
     onSalvarRegistro(novoReg);
     setItemAtivo(null);
+  };
+
+  // Ignorar evento que não é rotina (descarte com 1 clique)
+  const ignorarItem = (item: ItemPlanejado) => {
+    const novoReg: Registro = {
+      id: novoId('reg_ignorado'),
+      data: item.data,
+      hora: item.hora,
+      categoria_id: item.categoria_id || 'cat_geral',
+      status: 'ignorado',
+      valor: 0,
+      unidade: 'un',
+      titulo: item.titulo,
+      origem: item.origem,
+      ref_id: item.ref_id,
+      criado_em: new Date().toISOString()
+    };
+    onSalvarRegistro(novoReg);
+  };
+
+  const ignorarTodosOutros = () => {
+    pendentesOutros.forEach((item) => ignorarItem(item));
   };
 
   const salvarForaAgenda = (e: React.FormEvent) => {
@@ -137,7 +185,7 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Banner de status / boas-vindas */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-amber-500/10 via-[#141414] to-[#141414] border border-amber-500/20 p-5 rounded-2xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-amber-500/10 via-[#141414] to-[#141414] border border-amber-500/20 p-4 sm:p-5 rounded-2xl">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded">
@@ -150,7 +198,7 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
           </h1>
           <p className="text-xs sm:text-sm text-[#999] mt-1 max-w-xl">
             {agendaConectada
-              ? 'Lendo seus eventos do Google Agenda. Marque o que você cumpriu, ajuste quantidades e registre motivos das falhas.'
+              ? 'Lendo seus eventos do Google Agenda. Seus hábitos configurados ficam no topo para confirmação rápida.'
               : 'Google Agenda desconectado: usando o plano semanal padrão cadastrado nas categorias.'}
           </p>
         </div>
@@ -165,42 +213,42 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
         </button>
       </div>
 
-      {/* Seção 1: Itens pendentes de resposta */}
+      {/* SEÇÃO 1: HÁBITOS E ROTINAS DA SEMANA (EM DESTAQUE NO TOPO) */}
       <div>
         <Titulo
-          icone={<AlertCircle className="w-4 h-4 text-amber-400" />}
+          icone={<AlertCircle className="w-4 h-4 text-emerald-400" />}
           extra={
-            <span className="text-xs font-mono text-[#888]">
-              {pendentes.length} {pendentes.length === 1 ? 'pendência' : 'pendências'}
+            <span className="text-xs font-mono font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+              {pendentesRotina.length} {pendentesRotina.length === 1 ? 'rotina pendente' : 'rotinas pendentes'}
             </span>
           }
         >
-          Itens para responder
+          Hábitos & Rotinas para responder
         </Titulo>
 
-        {pendentes.length === 0 ? (
-          <Card className="p-6 sm:p-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center mb-3">
-              <Check className="w-6 h-6" />
+        {pendentesRotina.length === 0 ? (
+          <Card className="p-6 text-center">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center mb-2">
+              <Check className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-semibold text-white">Tudo em dia por aqui!</h3>
-            <p className="text-xs text-[#888] mt-1 max-w-md mx-auto">
-              Nenhum hábito planejado de ontem ou dos horários passados de hoje está sem resposta.
+            <h3 className="text-sm font-semibold text-white">Todas as rotinas em dia!</h3>
+            <p className="text-xs text-[#888] mt-0.5 max-w-md mx-auto">
+              Nenhum treino, corrida, leitura ou hábito planejado está pendente.
             </p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {pendentes.map((item) => {
+            {pendentesRotina.map((item) => {
               const cat = categorias.find((c) => c.id === item.categoria_id);
               const pil = pilares.find((p) => p.id === cat?.pilar_id);
               return (
-                <Card key={item.ref_id} className="p-3.5 sm:p-4 hover:border-[#333] transition-colors flex flex-col justify-between">
+                <Card
+                  key={item.ref_id}
+                  className="p-3.5 sm:p-4 hover:border-[#333] transition-colors flex flex-col justify-between border-l-4"
+                  style={{ borderLeftColor: pil?.cor || '#10b981' }}
+                >
                   <div>
                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: pil?.cor || '#f59e0b' }}
-                      />
                       <span className="text-[11px] font-mono text-[#aaa]">
                         {rotuloRelativo(item.data)}
                         {item.hora ? ` · ${item.hora}` : ''}
@@ -211,9 +259,11 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
                         </span>
                       )}
                     </div>
-                    <h4 className="text-sm font-semibold text-white truncate" title={item.titulo}>{item.titulo}</h4>
+                    <h4 className="text-sm font-semibold text-white truncate" title={item.titulo}>
+                      {item.titulo}
+                    </h4>
                     <p className="text-xs text-[#777] mt-0.5">
-                      {cat?.nome || 'Não categorizado'} • Sugerido:{' '}
+                      {cat?.nome} • Sugerido:{' '}
                       <strong className="text-[#ccc]">
                         {item.valor_sugerido} {cat?.unidade || 'un'}
                       </strong>
@@ -263,7 +313,83 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
         )}
       </div>
 
-      {/* Seção 2: Itens ainda por acontecer hoje */}
+      {/* SEÇÃO 2: OUTROS EVENTOS & LEMBRETES DA AGENDA (F1, FERIADOS, TAREFAS AVULSAS) */}
+      {pendentesOutros.length > 0 && (
+        <div className="pt-4 border-t border-[#1c1c1c]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#888] flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-[#777]" />
+                Outros Eventos & Lembretes da Agenda ({pendentesOutros.length})
+              </h3>
+              <p className="text-[11px] text-[#666]">
+                Estes eventos não têm tag de rotina e não afetam seu score. Você pode descartá-los ou vincular a uma rotina.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={ignorarTodosOutros}
+              className="text-xs text-[#888] hover:text-white bg-[#161616] hover:bg-[#202020] border border-[#2a2a2a] px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer self-start sm:self-auto transition-colors"
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+              Ignorar todos que não são rotina
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {pendentesOutros.map((item) => (
+              <Card
+                key={item.ref_id}
+                className="p-3.5 bg-[#0e0e0e] border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-[11px] font-mono text-[#777]">
+                      {rotuloRelativo(item.data)}
+                      {item.hora ? ` · ${item.hora}` : ' (dia inteiro)'}
+                    </span>
+                    <span className="text-[10px] font-mono bg-[#161616] text-[#777] px-1.5 py-0.5 rounded border border-[#222]">
+                      Não é rotina
+                    </span>
+                  </div>
+                  <h4 className="text-xs sm:text-sm font-semibold text-[#ddd] truncate" title={item.titulo}>
+                    {item.titulo}
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5 mt-3 pt-2.5 border-t border-[#181818]">
+                  <button
+                    type="button"
+                    onClick={() => abrirResposta(item, 'feito')}
+                    className="py-1.5 px-2 rounded-lg bg-emerald-950/20 hover:bg-emerald-900/30 text-emerald-300 border border-emerald-800/30 text-xs font-medium cursor-pointer transition-colors"
+                  >
+                    Fiz
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => abrirResposta(item, 'nao_feito')}
+                    className="py-1.5 px-2 rounded-lg bg-rose-950/20 hover:bg-rose-900/30 text-rose-300 border border-rose-800/30 text-xs font-medium cursor-pointer transition-colors"
+                  >
+                    Não fiz
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => ignorarItem(item)}
+                    className="py-1.5 px-2 rounded-lg bg-[#161616] hover:bg-[#202020] text-[#888] hover:text-white border border-[#2a2a2a] text-xs font-medium cursor-pointer transition-colors flex items-center justify-center gap-1"
+                    title="Descartar este evento (não é um hábito)"
+                  >
+                    <EyeOff className="w-3 h-3" />
+                    <span>Ignorar</span>
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SEÇÃO 3: PROGRAMADO PARA HOJE MAIS TARDE */}
       {futurosHoje.length > 0 && (
         <div>
           <Titulo icone={<Clock className="w-4 h-4 text-blue-400" />}>
@@ -272,6 +398,7 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
             {futurosHoje.map((item) => {
               const cat = categorias.find((c) => c.id === item.categoria_id);
+              const ehRotina = item.categoria_id && item.categoria_id !== 'cat_geral';
               return (
                 <div
                   key={item.ref_id}
@@ -281,6 +408,11 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
                     <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#888]">
                       <Clock className="w-3 h-3 text-blue-400" />
                       <span>{item.hora || 'Hoje'}</span>
+                      {ehRotina && item.tag && (
+                        <span className="text-[9px] text-amber-300 bg-[#1c1c1c] px-1 rounded">
+                          [{item.tag}]
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs font-medium text-white truncate mt-0.5">{item.titulo}</p>
                   </div>
@@ -298,7 +430,7 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
         </div>
       )}
 
-      {/* Seção 3: Histórico recente de lançamentos */}
+      {/* SEÇÃO 4: HISTÓRICO RECENTE DE LANÇAMENTOS */}
       <div>
         <Titulo icone={<Calendar className="w-4 h-4 text-[#888]" />}>
           Lançamentos recentes (últimos 3 dias)
@@ -310,69 +442,71 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
           </Card>
         ) : (
           <div className="space-y-2">
-            {respondidosRecentes.map((r) => {
-              const cat = categorias.find((c) => c.id === r.categoria_id);
-              const pil = pilares.find((p) => p.id === cat?.pilar_id);
-              const statusCor =
-                r.status === 'feito'
-                  ? 'text-emerald-400 bg-emerald-950/30 border-emerald-800/40'
-                  : r.status === 'parcial'
-                  ? 'text-amber-400 bg-amber-950/30 border-amber-800/40'
-                  : r.status === 'nao_feito'
-                  ? 'text-rose-400 bg-rose-950/30 border-rose-800/40'
-                  : 'text-[#888] bg-[#181818] border-[#2a2a2a]';
+            {respondidosRecentes
+              .filter((r) => r.status !== 'ignorado')
+              .map((r) => {
+                const cat = categorias.find((c) => c.id === r.categoria_id);
+                const pil = pilares.find((p) => p.id === cat?.pilar_id);
+                const statusCor =
+                  r.status === 'feito'
+                    ? 'text-emerald-400 bg-emerald-950/30 border-emerald-800/40'
+                    : r.status === 'parcial'
+                    ? 'text-amber-400 bg-amber-950/30 border-amber-800/40'
+                    : r.status === 'nao_feito'
+                    ? 'text-rose-400 bg-rose-950/30 border-rose-800/40'
+                    : 'text-[#888] bg-[#181818] border-[#2a2a2a]';
 
-              return (
-                <div
-                  key={r.id}
-                  className="bg-[#101010] border border-[#1e1e1e] p-3 rounded-xl flex items-center justify-between gap-3 text-xs"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: pil?.cor || '#666' }}
-                    />
-                    <div className="truncate">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white">{cat?.nome || r.titulo}</span>
-                        {r.origem === 'manual' && (
-                          <span className="text-[10px] font-mono bg-purple-950/40 text-purple-300 border border-purple-800/40 px-1.5 rounded">
-                            extra
+                return (
+                  <div
+                    key={r.id}
+                    className="bg-[#101010] border border-[#1e1e1e] p-3 rounded-xl flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: pil?.cor || '#666' }}
+                      />
+                      <div className="truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">{cat?.nome || r.titulo}</span>
+                          {r.origem === 'manual' && (
+                            <span className="text-[10px] font-mono bg-purple-950/40 text-purple-300 border border-purple-800/40 px-1.5 rounded">
+                              extra
+                            </span>
+                          )}
+                          <span className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded border ${statusCor}`}>
+                            {r.status.replace('_', ' ')}
                           </span>
-                        )}
-                        <span className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded border ${statusCor}`}>
-                          {r.status.replace('_', ' ')}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-[#777] flex items-center gap-2 mt-0.5">
-                        <span>{rotuloRelativo(r.data)}</span>
-                        {contaComoFeito(r) && (
-                          <span>
-                            • {r.valor} {r.unidade}
-                          </span>
-                        )}
-                        {r.motivo && <span className="text-rose-400/80">• Motivo: {r.motivo}</span>}
-                        {r.nota && <span className="italic text-[#aaa]">• "{r.nota}"</span>}
+                        </div>
+                        <div className="text-[11px] text-[#777] flex items-center gap-2 mt-0.5">
+                          <span>{rotuloRelativo(r.data)}</span>
+                          {contaComoFeito(r) && (
+                            <span>
+                              • {r.valor} {r.unidade}
+                            </span>
+                          )}
+                          {r.motivo && <span className="text-rose-400/80">• Motivo: {r.motivo}</span>}
+                          {r.nota && <span className="italic text-[#aaa]">• "{r.nota}"</span>}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => onRemoverRegistro(r.id)}
-                    className="text-[#555] hover:text-rose-400 p-1.5 transition-colors cursor-pointer"
-                    title="Excluir este lançamento"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              );
-            })}
+                    <button
+                      type="button"
+                      onClick={() => onRemoverRegistro(r.id)}
+                      className="text-[#555] hover:text-rose-400 p-1.5 transition-colors cursor-pointer"
+                      title="Excluir este lançamento"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
           </div>
         )}
       </div>
 
-      {/* Modal de confirmação da resposta rápida */}
+      {/* MODAL DE RESPOSTA (COM SELETOR DE CATEGORIA SE FOR EVENTO SOLTO) */}
       {itemAtivo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
           <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl max-w-md w-full p-5 shadow-2xl text-left">
@@ -387,11 +521,46 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
             </p>
 
             <div className="mt-4 space-y-3">
+              {/* SELETOR DE CATEGORIA CASO SEJA UM EVENTO SOLTO DA AGENDA */}
+              {(!itemAtivo.categoria_id || itemAtivo.categoria_id === 'cat_geral') && (
+                <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl">
+                  <label className="block text-xs font-semibold text-amber-300 mb-1 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    Este evento faz parte de alguma rotina?
+                  </label>
+                  <select
+                    value={categoriaEscolhidaId}
+                    onChange={(e) => {
+                      const novaCatId = e.target.value;
+                      setCategoriaEscolhidaId(novaCatId);
+                      const c = categorias.find((k) => k.id === novaCatId);
+                      if (c) setValorInput(c.valor_padrao);
+                    }}
+                    className={inputCls}
+                  >
+                    <option value="">Não, é apenas um compromisso geral (não afeta metas)</option>
+                    {categorias
+                      .filter((c) => !c.inativa && c.id !== 'cat_geral')
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          Sim, é {c.nome} ({c.unidade})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
               {/* Se feito ou parcial, pede a quantidade */}
               {(statusAtivo === 'feito' || statusAtivo === 'parcial') && (
                 <div>
                   <label className="block text-xs text-[#aaa] font-medium mb-1">
-                    Quantidade realizada ({categorias.find((c) => c.id === itemAtivo.categoria_id)?.unidade}):
+                    Quantidade realizada (
+                    {
+                      categorias.find(
+                        (c) => c.id === (categoriaEscolhidaId || itemAtivo.categoria_id)
+                      )?.unidade || 'un'
+                    }
+                    ):
                   </label>
                   <input
                     type="number"
@@ -442,7 +611,7 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
                   type="text"
                   value={notaInput}
                   onChange={(e) => setNotaInput(e.target.value)}
-                  placeholder="Ex: Treino rendeu muito; Sprint atrasou; Livro Sapiens cap. 3"
+                  placeholder="Ex: Treino rendeu muito; Sprint atrasou"
                   className={inputCls}
                 />
               </div>
@@ -477,7 +646,7 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
           >
             <h3 className="text-base font-semibold text-white">Lançar Atividade Fora da Agenda</h3>
             <p className="text-xs text-[#888] mt-1">
-              Fez uma pintura no sábado, uma rodagem extra de corrida ou adiantou a leitura? Registre aqui.
+              Fez um treino extra, pintura ou adiantou a leitura? Registre aqui.
             </p>
 
             <div className="mt-4 space-y-3">
@@ -493,7 +662,7 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
                   className={inputCls}
                 >
                   {categorias
-                    .filter((c) => !c.inativa)
+                    .filter((c) => !c.inativa && c.id !== 'cat_geral')
                     .map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.nome} ({c.unidade})

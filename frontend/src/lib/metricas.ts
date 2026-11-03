@@ -137,11 +137,14 @@ export function calcularSemana(
   const contar = (r: Registro | undefined, item?: ItemPlanejado) => {
     if (!r) {
       if (item && item.terminou) {
-        ad.pendentes++;
-        pendentes.push(item);
+        if (item.categoria_id && item.categoria_id !== 'cat_geral') {
+          ad.pendentes++;
+          pendentes.push(item);
+        }
       } else ad.futuros++;
       return;
     }
+    if (r.status === 'ignorado') return;
     if (r.status === 'feito') ad.feitos++;
     else if (r.status === 'parcial') ad.parciais++;
     else if (r.status === 'nao_feito') ad.naoFeitos++;
