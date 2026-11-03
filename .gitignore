@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Credenciais e chaves privadas
+chave-firebase.json
+*.pem
+*.key
+.wrangler/

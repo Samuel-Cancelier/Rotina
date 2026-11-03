@@ -1,79 +1,56 @@
 import React from 'react';
 import {
-  ShieldCheck,
-  Layers,
-  Calendar,
-  ListTodo,
-  Bot,
+  CheckCircle2,
+  CalendarDays,
+  FileText,
+  Settings,
   Sparkles,
-  Target,
-  BarChart3,
-  Database
+  Calendar
 } from 'lucide-react';
 
-export type AppTab = 'pilares' | 'categorias' | 'atividades' | 'calendario' | 'historico' | 'simulador' | 'analytics' | 'firestore';
+export type AppTab = 'hoje' | 'semana' | 'relatorio' | 'config';
 
 interface NavbarProps {
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
-  pilaresCount: number;
-  categoriesCount: number;
-  activitiesCount: number;
-  scoreGeral: number;
+  pendenciasCount: number;
+  scoreSemana: number | null;
+  googleConectado: boolean;
+  onConectarGoogle?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
-  pilaresCount,
-  categoriesCount,
-  activitiesCount,
-  scoreGeral
+  pendenciasCount,
+  scoreSemana,
+  googleConectado,
+  onConectarGoogle
 }) => {
   const tabs = [
     {
-      id: 'pilares' as const,
-      label: 'Pilares',
-      icon: ShieldCheck,
-      badge: 'Metas'
+      id: 'hoje' as const,
+      label: 'Hoje (Check-in)',
+      icon: CheckCircle2,
+      badge: pendenciasCount > 0 ? `${pendenciasCount}` : undefined,
+      badgeCor: 'bg-amber-500/20 text-amber-300 border-amber-500/30'
     },
     {
-      id: 'categorias' as const,
-      label: 'Categorias',
-      icon: Layers,
-      badge: `${categoriesCount}`
+      id: 'semana' as const,
+      label: 'Semana & Metas',
+      icon: CalendarDays,
+      badge: scoreSemana !== null ? `${scoreSemana} pts` : undefined,
+      badgeCor: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
     },
     {
-      id: 'atividades' as const,
-      label: 'Atividades',
-      icon: ListTodo,
-      badge: `${activitiesCount}`
+      id: 'relatorio' as const,
+      label: 'Relatório & Gemini',
+      icon: FileText
     },
     {
-      id: 'calendario' as const,
-      label: 'Calendário',
-      icon: Calendar
-    },
-    {
-      id: 'historico' as const,
-      label: 'Lançamentos',
-      icon: ListTodo
-    },
-    {
-      id: 'simulador' as const,
-      label: 'Telegram Bot',
-      icon: Bot,
-      badge: '/feito'
-    },
-    {
-      id: 'analytics' as const,
-      label: 'Analytics',
-      icon: BarChart3
-    },
-    {
-      id: 'firestore' as const,
-      label: 'Banco (Schema)',
-      icon: Database
+      id: 'config' as const,
+      label: 'Configurações',
+      icon: Settings
     }
   ];
 
@@ -86,21 +63,48 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Sparkles className="w-4 h-4 text-amber-400" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-white font-serif italic text-base sm:text-lg">
-                  Gestão de Rotina & Metas
-                </span>
-              </div>
+              <span className="text-white font-serif italic text-base sm:text-lg block leading-tight">
+                Rotina & Prestação de Contas
+              </span>
+              <span className="text-[10px] text-[#666] font-mono hidden sm:inline">
+                Google Agenda • Check-in • Gemini
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-3 text-xs font-mono text-[#888] bg-[#121212] px-3.5 py-1.5 rounded-lg border border-[#222]">
-              <span className="flex items-center gap-1.5 text-xs text-amber-400 font-bold font-mono">
-                Score: {scoreGeral}/100
+
+          <div className="flex items-center gap-2.5">
+            {/* Status Google Agenda */}
+            <button
+              type="button"
+              onClick={onConectarGoogle}
+              className={`flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                googleConectado
+                  ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50 hover:bg-emerald-900/40'
+                  : 'bg-[#181818] text-[#888] border-[#333] hover:text-white hover:bg-[#222]'
+              }`}
+              title={googleConectado ? 'Google Agenda conectado' : 'Conectar Google Agenda'}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  googleConectado ? 'bg-emerald-400 shadow-xs shadow-emerald-400' : 'bg-amber-400'
+                }`}
+              />
+              <span className="hidden sm:inline">
+                {googleConectado ? 'Google Agenda Ativo' : 'Conectar Google'}
+              </span>
+            </button>
+
+            {/* Score Semanal */}
+            <div className="flex items-center gap-2 text-xs font-mono bg-[#141414] px-3 py-1.5 rounded-lg border border-[#222]">
+              <span className="text-[#888]">Score:</span>
+              <span className="text-amber-400 font-bold">
+                {scoreSemana !== null ? `${scoreSemana}/100` : '—'}
               </span>
             </div>
           </div>
         </div>
+
+        {/* Abas */}
         <div className="flex overflow-x-auto space-x-1.5 py-1.5 no-scrollbar border-t border-[#1a1a1a]">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -108,7 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             return (
               <button
                 key={tab.id}
-                id={`nav-tab-${tab.id}`}
+                type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap cursor-pointer ${
                   isActive
@@ -120,10 +124,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>{tab.label}</span>
                 {tab.badge && (
                   <span
-                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded transition-colors ${
-                      isActive
-                        ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                        : 'bg-[#202020] text-[#777] border border-[#2a2a2a]'
+                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors ${
+                      tab.badgeCor || 'bg-[#202020] text-[#777] border-[#2a2a2a]'
                     }`}
                   >
                     {tab.badge}

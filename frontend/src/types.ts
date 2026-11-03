@@ -1,9 +1,14 @@
+// ============================================================
+// Modelo de dados v2 — App Rotina
+// "O Google planeja, o app cobra e mede, o Gemini analisa."
+// ============================================================
+
 export type PilarId =
-  | 'pilar_atividade_fisica'
-  | 'pilar_estudos'
-  | 'pilar_trabalho'
-  | 'pilar_domesticas'
-  | 'pilar_diversos';
+  | 'pilar_saude'
+  | 'pilar_intelectual'
+  | 'pilar_profissional'
+  | 'pilar_criativo'
+  | 'pilar_casa';
 
 export interface Pilar {
   id: PilarId;
@@ -11,84 +16,114 @@ export interface Pilar {
   nome: string;
   descricao: string;
   cor: string;
-  tem_meta: boolean;
-  meta_pontos_mensal: number; // Ex: 60 pontos
-  peso_no_score_geral: number; // Percentual no score geral (soma dos que têm meta = 100%)
+  peso_no_score_geral: number; // % (soma = 100)
 }
+
+/** Unidades com conversão automática (min <-> h). Outras são texto livre. */
+export type Unidade = 'km' | 'páginas' | 'min' | 'h' | 'sessões' | string;
 
 export interface Categoria {
   id: string;
   pilar_id: PilarId;
   nome: string;
+  /** Tag usada no título do evento do Google Agenda: "[Corrida] ..." */
+  tag: string;
+  /** Outras grafias aceitas para a mesma tag (sem acento, minúsculas) */
+  aliases: string[];
+  unidade: Unidade;
+  /** Quantidade sugerida no check-in quando o evento não informa */
+  valor_padrao: number;
+  meta_semanal_sessoes: number; // 0 = sem meta de frequência
+  meta_semanal_volume: number; // 0 = sem meta de volume
+  /** Dias planejados (0=Dom ... 6=Sáb). Usado quando a Agenda não está conectada */
+  dias_planejados: number[];
+  /** Horário sugerido para o Gemini criar o evento (HH:MM) */
+  horario_sugerido?: string;
+  /** Duração sugerida do evento em minutos */
+  duracao_min?: number;
   descricao?: string;
-  unidade_padrao: string; // Ex: km, horas, páginas, tarefas
-  pontos_por_unidade: number; // Ex: 1 km = 3 pts; 1h futsal = 10 pts; 1 pág = 0.5 pts
-  meta_mensal: number; // Meta pura em sua unidade (ex: 20 km, 100 págs, 160h)
-  cor: string;
-  icone?: string;
-  criado_em?: string;
-  peso_no_score?: number; // Percentual no score para a aba Metas
   inativa?: boolean;
 }
 
-export interface AtividadeCadastrada {
+export type StatusRegistro = 'feito' | 'parcial' | 'nao_feito' | 'remarcado';
+export type OrigemRegistro = 'agenda' | 'plano' | 'manual';
+
+export const MOTIVOS = [
+  'Cansaço',
+  'Trabalho estourou',
+  'Esqueci',
+  'Imprevisto',
+  'Saúde / dor',
+  'Clima',
+  'Sem vontade',
+  'Outro'
+] as const;
+
+/** Um registro = uma execução (ou não-execução) de um hábito em um dia. */
+export interface Registro {
   id: string;
-  nome: string;
+  data: string; // YYYY-MM-DD
+  hora?: string; // HH:MM (planejada)
   categoria_id: string;
-  categoria_nome: string;
-  pilar_id?: PilarId;
-  recorrente: boolean;
+  status: StatusRegistro;
+  valor: number;
   unidade: string;
-  afeta_meta: boolean;
-  campos_extras?: Record<string, any>;
+  titulo?: string; // título do evento ou descrição livre
+  motivo?: string;
+  nota?: string;
+  origem: OrigemRegistro;
+  /** "gcal:<eventId>" ou "plano:<data>:<categoria>" — evita perguntar duas vezes */
+  ref_id?: string;
   criado_em?: string;
 }
 
-export interface RegistroMensalCategoria {
+export type StatusObjetivo = 'ativo' | 'concluido' | 'pausado';
+
+/** Objetivos de médio/longo prazo ("Prêmios") */
+export interface Objetivo {
   id: string;
-  ano: number;
-  mes: number; // 1 a 12
-  categoria_id: string;
-  categoria_nome: string;
   pilar_id: PilarId;
-  valor_total: number; // ex: 28 km, 68 páginas
-  unidade: string;
-  atividades_breakdown: Record<string, number>;
-  atualizado_em?: string;
-}
-
-export interface MetaCategoria {
-  id: string;
-  categoria_id: string;
-  categoria_nome: string;
-  periodo: 'mensal' | 'anual';
-  niveis: {
-    minimo: number;
-    ideal: number;
-    excepcional: number;
-  };
-  unidade: string;
-  progresso_mes_atual: number;
-}
-
-export type TipoAgendamento = 'rotina' | 'pontual' | 'google_agenda';
-
-export interface AgendamentoItem {
-  id: string;
-  tipo: TipoAgendamento;
   titulo: string;
-  data: string; // YYYY-MM-DD
-  hora_inicio?: string;
-  hora_fim?: string;
-  categoria_id?: string;
-  categoria_nome?: string;
-  cor?: string;
-  pilar_id?: PilarId;
-  atividade_id?: string;
-  concluido?: boolean;
-  tag_livre?: string;
-  google_event_id?: string;
-  local?: string;
   descricao?: string;
-  link_reuniao?: string;
+  prazo?: string; // YYYY-MM-DD
+  status: StatusObjetivo;
+}
+
+export interface ConfigGeral {
+  id: 'geral';
+  /** Documento de contexto colado pelo usuário (vai no relatório e nas instruções do Gem) */
+  contexto: string;
+  /** Nome do calendário dedicado no Google Agenda */
+  nome_calendario: string;
+  /** Data a partir da qual o check-in passa a cobrar (YYYY-MM-DD) */
+  checkin_inicio: string;
+}
+
+/** Evento do Google Agenda já interpretado */
+export interface EventoAgenda {
+  ref_id: string; // "gcal:<id>"
+  calendario_id: string;
+  titulo: string;
+  tag: string | null; // tag normalizada extraída de "[Tag]"
+  categoria_id: string | null;
+  data: string; // YYYY-MM-DD
+  hora?: string; // HH:MM
+  inicio: string; // ISO
+  fim: string; // ISO
+  dia_inteiro: boolean;
+  valor_planejado: number | null;
+  descricao?: string;
+}
+
+/** Item que o check-in precisa perguntar (vindo da Agenda ou do plano semanal) */
+export interface ItemPlanejado {
+  ref_id: string;
+  origem: 'agenda' | 'plano';
+  data: string;
+  hora?: string;
+  titulo: string;
+  categoria_id: string | null;
+  tag?: string | null;
+  valor_sugerido: number;
+  terminou: boolean; // o horário já passou?
 }

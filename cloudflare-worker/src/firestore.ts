@@ -7,7 +7,6 @@ export interface Env {
   FIREBASE_PROJECT_ID: string;
   FIREBASE_CLIENT_EMAIL: string;
   FIREBASE_PRIVATE_KEY?: string;
-  TELEGRAM_BOT_TOKEN: string;
   API_SECRET_KEY?: string; // Senha para proteger a API
 }
 
@@ -221,13 +220,22 @@ export class FirestoreClient {
   }
 
   async listDocuments(collection: string): Promise<any[]> {
-    const res = await this.fetchAuth(`${this.baseUrl}/${collection}`);
-    if (!res.ok) {
-      if (res.status === 404) return [];
-      throw new Error(`Erro ao listar ${collection}: ${res.status}`);
-    }
-    const data: any = await res.json();
-    return (data.documents || []).map(fromFirestoreDoc);
+    // Paginação: a API REST devolve no máximo pageSize documentos por chamada
+    const docs: any[] = [];
+    let pageToken = '';
+    do {
+      const qs = new URLSearchParams({ pageSize: '300' });
+      if (pageToken) qs.set('pageToken', pageToken);
+      const res = await this.fetchAuth(`${this.baseUrl}/${collection}?${qs.toString()}`);
+      if (!res.ok) {
+        if (res.status === 404) return docs;
+        throw new Error(`Erro ao listar ${collection}: ${res.status}`);
+      }
+      const data: any = await res.json();
+      docs.push(...(data.documents || []).map(fromFirestoreDoc));
+      pageToken = data.nextPageToken || '';
+    } while (pageToken);
+    return docs;
   }
 
   async getDocument(collection: string, id: string): Promise<any | null> {
