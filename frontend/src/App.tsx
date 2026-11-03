@@ -4,6 +4,7 @@ import { CheckinView } from './components/CheckinView';
 import { SemanaView } from './components/SemanaView';
 import { RelatorioView } from './components/RelatorioView';
 import { ConfigView } from './components/ConfigView';
+import { AuthLockScreen } from './components/AuthLockScreen';
 import {
   PILARES_INICIAIS,
   CATEGORIAS_INICIAIS,
@@ -18,6 +19,12 @@ import { calcularSemana } from './lib/metricas';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<AppTab>('hoje');
+
+  // Controle de Bloqueio Seguro (PIN / Senha)
+  const [isLocked, setIsLocked] = useState<boolean>(() => {
+    // Se o usuário já autenticou nesta sessão, libera direto
+    return sessionStorage.getItem('rotina2_autenticado') !== 'true';
+  });
 
   // Coleções com sincronização (offline-first localStorage + Cloudflare/Firestore opcional)
   const {
@@ -64,6 +71,11 @@ export default function App() {
     agenda.conectado
   );
 
+  // Se o aplicativo estiver bloqueado, exibe a tela de PIN
+  if (isLocked) {
+    return <AuthLockScreen onUnlock={() => setIsLocked(false)} />;
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#d4d4d4] flex flex-col font-sans antialiased">
       <Navbar
@@ -77,6 +89,10 @@ export default function App() {
             if (agenda.clientIdConfigurado) agenda.conectar();
             else setActiveTab('config');
           }
+        }}
+        onLock={() => {
+          sessionStorage.removeItem('rotina2_autenticado');
+          setIsLocked(true);
         }}
       />
 

@@ -5,7 +5,7 @@ import {
   FileText,
   Settings,
   Sparkles,
-  Calendar
+  Lock
 } from 'lucide-react';
 
 export type AppTab = 'hoje' | 'semana' | 'relatorio' | 'config';
@@ -17,6 +17,7 @@ interface NavbarProps {
   scoreSemana: number | null;
   googleConectado: boolean;
   onConectarGoogle?: () => void;
+  onLock?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -25,7 +26,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   pendenciasCount,
   scoreSemana,
   googleConectado,
-  onConectarGoogle
+  onConectarGoogle,
+  onLock
 }) => {
   const tabs = [
     {
@@ -72,12 +74,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             {/* Status Google Agenda */}
             <button
               type="button"
               onClick={onConectarGoogle}
-              className={`flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 text-xs font-mono px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
                 googleConectado
                   ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50 hover:bg-emerald-900/40'
                   : 'bg-[#181818] text-[#888] border-[#333] hover:text-white hover:bg-[#222]'
@@ -90,17 +92,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               />
               <span className="hidden sm:inline">
-                {googleConectado ? 'Google Agenda Ativo' : 'Conectar Google'}
+                {googleConectado ? 'Google Ativo' : 'Conectar Google'}
               </span>
             </button>
 
             {/* Score Semanal */}
-            <div className="flex items-center gap-2 text-xs font-mono bg-[#141414] px-3 py-1.5 rounded-lg border border-[#222]">
-              <span className="text-[#888]">Score:</span>
+            <div className="flex items-center gap-1.5 text-xs font-mono bg-[#141414] px-2.5 sm:px-3 py-1.5 rounded-lg border border-[#222]">
+              <span className="text-[#888] hidden sm:inline">Score:</span>
               <span className="text-amber-400 font-bold">
                 {scoreSemana !== null ? `${scoreSemana}/100` : '—'}
               </span>
             </div>
+
+            {/* Botão de Bloqueio Seguro */}
+            {onLock && (
+              <button
+                type="button"
+                onClick={onLock}
+                className="p-2 rounded-lg bg-[#141414] hover:bg-[#202020] text-[#777] hover:text-amber-400 border border-[#222] transition-colors cursor-pointer"
+                title="Bloquear aplicativo com PIN"
+              >
+                <Lock className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
