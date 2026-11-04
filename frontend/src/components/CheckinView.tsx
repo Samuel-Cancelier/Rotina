@@ -99,14 +99,16 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
   const abrirResposta = (item: ItemPlanejado, status: StatusRegistro) => {
     setItemAtivo(item);
     setStatusAtivo(status);
-    const cat = categorias.find((c) => c.id === item.categoria_id);
+    // Categoria inicial: usa a categoria já identificada no evento, ou a primeira válida, ou geral
+    const catInicial =
+      item.categoria_id ||
+      (item.categoria_id === null ? 'cat_geral' : (categorias.find((c) => !c.inativa && c.id !== 'cat_geral')?.id || 'cat_geral'));
+    setCategoriaEscolhidaId(catInicial);
+
+    const cat = categorias.find((c) => c.id === catInicial);
     setValorInput(item.valor_sugerido || cat?.valor_padrao || 1);
     setMotivoInput('');
     setNotaInput('');
-    // Se o item já tem categoria de rotina, usa ela; se for geral/vazia, deixa vazio para ele escolher se quiser
-    setCategoriaEscolhidaId(
-      item.categoria_id && item.categoria_id !== 'cat_geral' ? item.categoria_id : ''
-    );
   };
 
   const confirmarResposta = () => {
@@ -520,35 +522,68 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
               {itemAtivo.titulo} • {rotuloRelativo(itemAtivo.data)}
             </p>
 
-            <div className="mt-4 space-y-3">
-              {/* SELETOR DE CATEGORIA CASO SEJA UM EVENTO SOLTO DA AGENDA */}
-              {(!itemAtivo.categoria_id || itemAtivo.categoria_id === 'cat_geral') && (
-                <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl">
-                  <label className="block text-xs font-semibold text-amber-300 mb-1 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    Este evento faz parte de alguma rotina?
-                  </label>
-                  <select
-                    value={categoriaEscolhidaId}
-                    onChange={(e) => {
-                      const novaCatId = e.target.value;
-                      setCategoriaEscolhidaId(novaCatId);
-                      const c = categorias.find((k) => k.id === novaCatId);
-                      if (c) setValorInput(c.valor_padrao);
-                    }}
-                    className={inputCls}
-                  >
-                    <option value="">Não, é apenas um compromisso geral (não afeta metas)</option>
+            <div className="mt-4 space-y-3.5">
+              {/* SELETOR DE CATEGORIA / HÁBITO (SEMPRE EDITÁVEL) */}
+              <div className="bg-[#181818] border border-[#262626] p-3 rounded-xl">
+                <label className="block text-xs font-semibold text-[#ddd] mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-amber-400" />
+                    Categoria do Hábito:
+                  </span>
+                  {categoriaEscolhidaId && categoriaEscolhidaId !== 'cat_geral' && (
+                    <span
+                      className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                      style={{
+                        backgroundColor: `${pilares.find((p) => p.id === categorias.find((c) => c.id === categoriaEscolhidaId)?.pilar_id)?.cor || '#10b981'}20`,
+                        color: pilares.find((p) => p.id === categorias.find((c) => c.id === categoriaEscolhidaId)?.pilar_id)?.cor || '#10b981'
+                      }}
+                    >
+                      {pilares.find((p) => p.id === categorias.find((c) => c.id === categoriaEscolhidaId)?.pilar_id)?.nome}
+                    </span>
+                  )}
+                </label>
+                <select
+                  value={categoriaEscolhidaId}
+                  onChange={(e) => {
+                    const novaCatId = e.target.value;
+                    setCategoriaEscolhidaId(novaCatId);
+                    const c = categorias.find((k) => k.id === novaCatId);
+                    if (c && c.valor_padrao) {
+                      setValorInput(c.valor_padrao);
+                    }
+                  }}
+                  className={inputCls}
+                >
+                  <optgroup label="Seus Hábitos & Metas da Rotina">
                     {categorias
                       .filter((c) => !c.inativa && c.id !== 'cat_geral')
                       .map((c) => (
                         <option key={c.id} value={c.id}>
-                          Sim, é {c.nome} ({c.unidade})
+                          {c.nome} ({c.unidade})
                         </option>
                       ))}
-                  </select>
-                </div>
-              )}
+                  </optgroup>
+                  <optgroup label="Outro">
+                    <option value="cat_geral">
+                      Compromisso geral (não pontua nas metas)
+                    </option>
+                  </optgroup>
+                </select>
+                {itemAtivo.categoria_id && categoriaEscolhidaId !== itemAtivo.categoria_id && (
+                  <p className="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1 font-sans">
+                    <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                    Alterado de{' '}
+                    <strong>
+                      {categorias.find((c) => c.id === itemAtivo.categoria_id)?.nome || 'Outro'}
+                    </strong>{' '}
+                    para{' '}
+                    <strong>
+                      {categorias.find((c) => c.id === categoriaEscolhidaId)?.nome || 'Geral'}
+                    </strong>
+                    .
+                  </p>
+                )}
+              </div>
 
               {/* Se feito ou parcial, pede a quantidade */}
               {(statusAtivo === 'feito' || statusAtivo === 'parcial') && (
