@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // ------------------------------------------------------------
 // Cliente da API (Cloudflare Worker -> Firestore)
 // Estratégia: localStorage é a fonte imediata (offline-first);
-// a nuvem é sincronizada em segundo plano.
+// a nuvem é sincronizada bidirecionalmente em tempo real.
 // ------------------------------------------------------------
 
 export function getApiBase(): string {
@@ -43,8 +43,10 @@ function lerLocal<T>(chave: string, padrao: T): T {
 }
 
 /**
- * Coleção sincronizada (localStorage + Worker).
- * - `iniciais`: semeados na nuvem se a coleção remota estiver vazia.
+ * Coleção sincronizada bidirecionalmente (localStorage + Cloudflare Worker/Firestore).
+ * - Une itens remotos com itens criados localmente (sem perda de dados entre celular e PC).
+ * - Sobe automaticamente qualquer item pendente local para a nuvem.
+ * - Sincroniza em background a cada 15s e ao focar a aba.
  */
 export function useColecao<T extends { id: string }>(colecao: string, iniciais: T[] = []) {
   const chave = `rotina2_${colecao}`;
@@ -64,36 +66,73 @@ export function useColecao<T extends { id: string }>(colecao: string, iniciais: 
     }
     try {
       const res = await apiFetch(`/api/${colecao}`);
-      if (!res.ok) throw new Error(String(res.status));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const remotos = (await res.json()) as T[];
       setStatus('online');
-      if (Array.isArray(remotos) && remotos.length > 0) {
-        setItens(remotos.map(({ atualizado_em, ...r }: any) => r as T));
-      } else if (itensRef.current.length > 0) {
-        // Nuvem vazia: sobe o que existe localmente (primeiro uso / semente)
-        await Promise.all(
-          itensRef.current.map((it) =>
-            apiFetch(`/api/${colecao}/${encodeURIComponent(it.id)}`, {
-              method: 'PUT',
-              body: JSON.stringify(it)
-            })
-          )
-        );
+
+      if (Array.isArray(remotos)) {
+        if (remotos.length === 0 && itensRef.current.length > 0) {
+          // Nuvem vazia: semeia itens locais existentes
+          await Promise.all(
+            itensRef.current.map((it) =>
+              apiFetch(`/api/${colecao}/${encodeURIComponent(it.id)}`, {
+                method: 'PUT',
+                body: JSON.stringify(it)
+              })
+            )
+          );
+        } else {
+          // Merge inteligente: combina dados da nuvem com registros locais
+          const mapa = new Map<string, T>();
+          // 1. Itens locais primeiro
+          itensRef.current.forEach((it) => mapa.set(it.id, it));
+          // 2. Itens remotos sobrepõem/adicionam (nuvem é a autoridade)
+          remotos.forEach(({ atualizado_em, ...r }: any) => mapa.set(r.id, r as T));
+          const unificados = Array.from(mapa.values());
+          setItens(unificados);
+
+          // 3. Se existiam itens locais que ainda NÃO subiram para a nuvem, sobe agora!
+          const idsRemotos = new Set(remotos.map((r: any) => r.id));
+          const pendentes = itensRef.current.filter((it) => !idsRemotos.has(it.id));
+          if (pendentes.length > 0) {
+            Promise.all(
+              pendentes.map((it) =>
+                apiFetch(`/api/${colecao}/${encodeURIComponent(it.id)}`, {
+                  method: 'PUT',
+                  body: JSON.stringify(it)
+                })
+              )
+            ).catch(console.error);
+          }
+        }
       }
     } catch {
       setStatus('offline');
     }
   }, [colecao]);
 
+  // Polling ativo a cada 15s + ao focar/retornar à aba
   useEffect(() => {
     carregar();
     const onFocus = () => carregar();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') carregar();
+    };
+
     window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    const interval = setInterval(carregar, 15000);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+      clearInterval(interval);
+    };
   }, [carregar]);
 
   const salvar = useCallback(
-    (item: T) => {
+    async (item: T) => {
+      // 1. Atualiza o estado local imediatamente (sem travamentos na UI)
       setItens((prev) => {
         const idx = prev.findIndex((p) => p.id === item.id);
         if (idx < 0) return [...prev, item];
@@ -101,23 +140,41 @@ export function useColecao<T extends { id: string }>(colecao: string, iniciais: 
         copia[idx] = item;
         return copia;
       });
+
+      // 2. Persiste na nuvem Cloudflare Worker / Firestore
       if (getApiBase()) {
-        apiFetch(`/api/${colecao}/${encodeURIComponent(item.id)}`, {
-          method: 'PUT',
-          body: JSON.stringify(item)
-        }).catch(() => setStatus('offline'));
+        try {
+          const res = await apiFetch(`/api/${colecao}/${encodeURIComponent(item.id)}`, {
+            method: 'PUT',
+            body: JSON.stringify(item)
+          });
+          if (res.ok) {
+            setStatus('online');
+          } else {
+            console.warn(`[Sync] Falha ao salvar ${colecao}/${item.id}: status ${res.status}`);
+            setStatus('offline');
+          }
+        } catch (err) {
+          console.warn(`[Sync] Erro de rede ao salvar ${colecao}/${item.id}:`, err);
+          setStatus('offline');
+        }
       }
     },
     [colecao]
   );
 
   const remover = useCallback(
-    (id: string) => {
+    async (id: string) => {
       setItens((prev) => prev.filter((p) => p.id !== id));
       if (getApiBase()) {
-        apiFetch(`/api/${colecao}/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() =>
-          setStatus('offline')
-        );
+        try {
+          const res = await apiFetch(`/api/${colecao}/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+          });
+          if (res.ok) setStatus('online');
+        } catch {
+          setStatus('offline');
+        }
       }
     },
     [colecao]

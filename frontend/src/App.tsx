@@ -26,35 +26,49 @@ export default function App() {
     return sessionStorage.getItem('rotina2_autenticado') !== 'true';
   });
 
-  // Coleções com sincronização (offline-first localStorage + Cloudflare/Firestore opcional)
+  // Coleções com sincronização (offline-first localStorage + Cloudflare/Firestore em tempo real)
   const {
     itens: pilares,
-    salvar: salvarPilar
+    salvar: salvarPilar,
+    recarregar: recarregarPilares
   } = useColecao<Pilar>('pilares', PILARES_INICIAIS);
 
   const {
     itens: categorias,
     salvar: salvarCategoria,
-    remover: removerCategoria
+    remover: removerCategoria,
+    recarregar: recarregarCategorias
   } = useColecao<Categoria>('categorias', CATEGORIAS_INICIAIS);
 
   const {
     itens: registros,
     salvar: salvarRegistro,
-    remover: removerRegistro
+    remover: removerRegistro,
+    status: statusRegistros,
+    recarregar: recarregarRegistros
   } = useColecao<Registro>('registros', []);
 
   const {
     itens: objetivos,
     salvar: salvarObjetivo,
-    remover: removerObjetivo
+    remover: removerObjetivo,
+    recarregar: recarregarObjetivos
   } = useColecao<Objetivo>('objetivos', OBJETIVOS_INICIAIS);
 
   const {
     itens: configLista,
     salvar: salvarConfigItem,
-    status: statusConfig
+    status: statusConfig,
+    recarregar: recarregarConfig
   } = useColecao<ConfigGeral>('config', [CONFIG_INICIAL]);
+
+  const handleForcarSync = () => {
+    recarregarPilares();
+    recarregarCategorias();
+    recarregarRegistros();
+    recarregarObjetivos();
+    recarregarConfig();
+  };
 
   const config = configLista[0] || CONFIG_INICIAL;
   const localPinHash = localStorage.getItem('rotina2_pin_hash') || undefined;
@@ -113,6 +127,8 @@ export default function App() {
         pendenciasCount={statsSemana.aderencia.pendentes}
         scoreSemana={statsSemana.score}
         googleConectado={agenda.conectado}
+        cloudStatus={statusRegistros}
+        onForcarSync={handleForcarSync}
         onConectarGoogle={() => {
           if (!agenda.conectado) {
             if (agenda.clientIdConfigurado) agenda.conectar();

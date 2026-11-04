@@ -5,8 +5,12 @@ import {
   FileText,
   Settings,
   Sparkles,
-  Lock
+  Lock,
+  Cloud,
+  CloudOff,
+  RefreshCw
 } from 'lucide-react';
+import { StatusSync } from '../lib/api';
 
 export type AppTab = 'hoje' | 'semana' | 'relatorio' | 'config';
 
@@ -18,6 +22,8 @@ interface NavbarProps {
   googleConectado: boolean;
   onConectarGoogle?: () => void;
   onLock?: () => void;
+  cloudStatus?: StatusSync;
+  onForcarSync?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -27,7 +33,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   scoreSemana,
   googleConectado,
   onConectarGoogle,
-  onLock
+  onLock,
+  cloudStatus = 'online',
+  onForcarSync
 }) => {
   const tabs = [
     {
@@ -93,6 +101,37 @@ export const Navbar: React.FC<NavbarProps> = ({
               />
               <span className="hidden sm:inline">
                 {googleConectado ? 'Google Ativo' : 'Conectar Google'}
+              </span>
+            </button>
+
+            {/* Status Nuvem / Sincronização */}
+            <button
+              type="button"
+              onClick={onForcarSync}
+              className={`flex items-center gap-1.5 text-xs font-mono px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                cloudStatus === 'online'
+                  ? 'bg-[#121a14] text-emerald-300 border-emerald-800/40 hover:bg-emerald-950/60'
+                  : cloudStatus === 'carregando'
+                  ? 'bg-amber-950/20 text-amber-300 border-amber-800/30'
+                  : 'bg-rose-950/20 text-rose-300 border-rose-800/30 hover:bg-rose-950/40'
+              }`}
+              title={
+                cloudStatus === 'online'
+                  ? 'Nuvem sincronizada (clique para sincronizar agora)'
+                  : cloudStatus === 'carregando'
+                  ? 'Sincronizando com a nuvem...'
+                  : 'Nuvem offline (clique para tentar sincronizar)'
+              }
+            >
+              {cloudStatus === 'online' ? (
+                <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+              ) : cloudStatus === 'carregando' ? (
+                <RefreshCw className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+              ) : (
+                <CloudOff className="w-3.5 h-3.5 text-rose-400" />
+              )}
+              <span className="hidden md:inline">
+                {cloudStatus === 'online' ? 'Nuvem Ativa' : cloudStatus === 'carregando' ? 'Sincronizando...' : 'Offline'}
               </span>
             </button>
 
