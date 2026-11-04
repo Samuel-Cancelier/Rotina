@@ -52,10 +52,20 @@ export default function App() {
 
   const {
     itens: configLista,
-    salvar: salvarConfigItem
+    salvar: salvarConfigItem,
+    status: statusConfig
   } = useColecao<ConfigGeral>('config', [CONFIG_INICIAL]);
 
   const config = configLista[0] || CONFIG_INICIAL;
+  const localPinHash = localStorage.getItem('rotina2_pin_hash') || undefined;
+  const cloudPinHash = config.pin_hash || localPinHash;
+
+  // Sincroniza o PIN com a nuvem Firestore se ele já existir localmente
+  React.useEffect(() => {
+    if (localPinHash && !config.pin_hash && statusConfig === 'online') {
+      salvarConfigItem({ ...config, pin_hash: localPinHash });
+    }
+  }, [localPinHash, config, statusConfig, salvarConfigItem]);
 
   // Google Agenda (leitura client-side com GIS)
   const agenda = useAgenda(categorias, config.nome_calendario || 'Rotina');
@@ -73,7 +83,26 @@ export default function App() {
 
   // Se o aplicativo estiver bloqueado, exibe a tela de PIN
   if (isLocked) {
-    return <AuthLockScreen onUnlock={() => setIsLocked(false)} />;
+    if (statusConfig === 'carregando' && !localPinHash) {
+      return (
+        <div className="min-h-screen bg-[#070707] text-[#d4d4d4] flex items-center justify-center p-4">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-xs text-[#888]">Verificando credenciais...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <AuthLockScreen
+        onUnlock={() => setIsLocked(false)}
+        cloudPinHash={cloudPinHash}
+        onSaveCloudPin={(hash) => {
+          salvarConfigItem({ ...config, pin_hash: hash });
+        }}
+      />
+    );
   }
 
   return (

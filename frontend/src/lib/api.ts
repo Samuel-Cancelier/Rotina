@@ -12,11 +12,19 @@ export function getApiBase(): string {
     .replace(/\/$/, '');
 }
 
+export function getApiSecret(): string {
+  return (
+    localStorage.getItem('API_SECRET_KEY') ||
+    import.meta.env.VITE_API_SECRET_KEY ||
+    'rotina_sec_samuel_2026'
+  ).trim();
+}
+
 export function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const base = getApiBase();
   const url = endpoint.startsWith('http') ? endpoint : `${base}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
   const headers = new Headers(options.headers || {});
-  const token = localStorage.getItem('API_SECRET_KEY');
+  const token = getApiSecret();
   if (token) headers.set('Authorization', `Bearer ${token}`);
   if (options.method && options.method !== 'GET') headers.set('Content-Type', 'application/json');
   return fetch(url, { ...options, headers });

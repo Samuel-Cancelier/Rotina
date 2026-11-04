@@ -17,7 +17,7 @@ cd ..
 
 echo.
 echo [2/2] Enviando para o Cloudflare Pages...
-call npx wrangler pages deploy dist --project-name rotina-app
+call npx wrangler pages deploy dist --project-name rotina-metas-web
 
 echo.
 echo ========================================================

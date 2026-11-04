@@ -97,6 +97,8 @@ export interface ConfigGeral {
   nome_calendario: string;
   /** Data a partir da qual o check-in passa a cobrar (YYYY-MM-DD) */
   checkin_inicio: string;
+  /** Hash SHA-256 do PIN para sincronizar a autenticação na nuvem em qualquer aparelho */
+  pin_hash?: string;
 }
 
 /** Evento do Google Agenda já interpretado */

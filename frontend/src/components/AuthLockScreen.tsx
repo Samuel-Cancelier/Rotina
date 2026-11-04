@@ -3,6 +3,8 @@ import { Lock, ShieldCheck, KeyRound, ArrowRight, Eye, EyeOff } from 'lucide-rea
 
 interface AuthLockScreenProps {
   onUnlock: () => void;
+  cloudPinHash?: string;
+  onSaveCloudPin?: (hash: string) => void;
 }
 
 // Utilitário para gerar hash SHA-256
@@ -13,8 +15,12 @@ async function sha256(message: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({ onUnlock }) => {
-  const hashSalvo = localStorage.getItem('rotina2_pin_hash');
+export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
+  onUnlock,
+  cloudPinHash,
+  onSaveCloudPin
+}) => {
+  const hashSalvo = cloudPinHash || localStorage.getItem('rotina2_pin_hash');
   const [pinInput, setPinInput] = useState('');
   const [confirmPinInput, setConfirmPinInput] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -42,11 +48,14 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({ onUnlock }) => {
         }
         const hash = await sha256(pinInput);
         localStorage.setItem('rotina2_pin_hash', hash);
+        if (onSaveCloudPin) onSaveCloudPin(hash);
         sessionStorage.setItem('rotina2_autenticado', 'true');
         onUnlock();
       } else {
         const hashTentativa = await sha256(pinInput);
         if (hashTentativa === hashSalvo) {
+          // Mantém sincronizado no localStorage do aparelho atual também
+          localStorage.setItem('rotina2_pin_hash', hashTentativa);
           sessionStorage.setItem('rotina2_autenticado', 'true');
           onUnlock();
         } else {
