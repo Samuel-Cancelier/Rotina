@@ -6,8 +6,20 @@ const STATUS_TXT: Record<string, string> = {
   feito: '✅ feito',
   parcial: '🟡 parcial',
   nao_feito: '❌ não feito',
-  remarcado: '↪️ remarcado'
+  remarcado: '↪️ remarcado',
+  ignorado: '👁️ ignorado'
 };
+
+function statusTexto(status?: string): string {
+  if (!status) return '';
+  return STATUS_TXT[status] || status;
+}
+
+function statusIcone(status?: string): string {
+  if (!status) return '•';
+  const txt = STATUS_TXT[status];
+  return txt ? txt.split(' ')[0] : '•';
+}
 
 function nomeCat(categorias: Categoria[], id: string) {
   return categorias.find((c) => c.id === id)?.nome || id;
@@ -53,17 +65,19 @@ export function gerarRelatorioSemanal(p: ParamsRelatorio): string {
   L.push('');
 
   if (p.incluirContexto) {
-    if (p.config.contexto.trim()) {
+    const contexto = (p.config?.contexto || '').trim();
+    if (contexto) {
       L.push('## Meu contexto');
-      L.push(p.config.contexto.trim());
+      L.push(contexto);
       L.push('');
     }
-    const ativos = p.objetivos.filter((o) => o.status === 'ativo');
+    const ativos = (p.objetivos || []).filter((o) => o && o.status === 'ativo');
     if (ativos.length) {
       L.push('## Objetivos de médio/longo prazo');
       for (const o of ativos) {
-        const pil = p.pilares.find((x) => x.id === o.pilar_id)?.nome || '';
-        L.push(`- **${o.titulo}** (${pil}${o.prazo ? `, prazo ${ddmm(o.prazo)}/${o.prazo.slice(0, 4)}` : ''})${o.descricao ? ` — ${o.descricao}` : ''}`);
+        const pil = (p.pilares || []).find((x) => x.id === o.pilar_id)?.nome || '';
+        const prazoStr = o.prazo ? `, prazo ${ddmm(o.prazo)}/${String(o.prazo).slice(0, 4)}` : '';
+        L.push(`- **${o.titulo}** (${pil}${prazoStr})${o.descricao ? ` — ${o.descricao}` : ''}`);
       }
       L.push('');
     }
@@ -98,7 +112,7 @@ export function gerarRelatorioSemanal(p: ParamsRelatorio): string {
       for (const r of [...sc.falhas, ...sc.parciais]) {
         const extra = [r.motivo && `motivo: ${r.motivo}`, r.nota && `nota: "${r.nota}"`].filter(Boolean).join(' — ');
         L.push(
-          `  - ${rotuloDia(r.data)}${r.hora ? ` ${r.hora}` : ''}: ${STATUS_TXT[r.status]}${
+          `  - ${rotuloDia(r.data)}${r.hora ? ` ${r.hora}` : ''}: ${statusTexto(r.status)}${
             r.status === 'parcial' ? ` (${formatarNumero(r.valor)} ${r.unidade})` : ''
           }${extra ? ` — ${extra}` : ''}`
         );
@@ -110,10 +124,10 @@ export function gerarRelatorioSemanal(p: ParamsRelatorio): string {
   // ---------- Dia a dia ----------
   L.push('## Dia a dia');
   for (const d of s.dias) {
-    const doDia = s.registros
-      .filter((r) => r.data === d)
+    const doDia = (s.registros || [])
+      .filter((r) => r.data === d && r.status !== 'ignorado')
       .sort((a, b) => (a.hora || '99').localeCompare(b.hora || '99'));
-    const pend = s.pendentes.filter((x) => x.data === d);
+    const pend = (s.pendentes || []).filter((x) => x.data === d);
     if (doDia.length === 0 && pend.length === 0) {
       L.push(`- **${DIAS_LONGOS[diaSemana(d)]} ${ddmm(d)}:** sem registros`);
       continue;
@@ -121,7 +135,7 @@ export function gerarRelatorioSemanal(p: ParamsRelatorio): string {
     const itens = doDia.map((r) => {
       const qtd = contaComoFeito(r) && r.unidade !== 'sessões' ? ` ${formatarNumero(r.valor)} ${r.unidade}` : '';
       const fora = r.origem === 'manual' ? ' (fora da agenda)' : '';
-      return `${nomeCat(p.categorias, r.categoria_id)}${qtd} ${STATUS_TXT[r.status].split(' ')[0]}${fora}`;
+      return `${nomeCat(p.categorias, r.categoria_id)}${qtd} ${statusIcone(r.status)}${fora}`;
     });
     pend.forEach((x) => itens.push(`${x.titulo} ❔ sem resposta`));
     L.push(`- **${DIAS_LONGOS[diaSemana(d)]} ${ddmm(d)}:** ${itens.join(' · ')}`);
@@ -230,17 +244,19 @@ export function gerarRelatorioMensal(p: ParamsRelatorioMensal): string {
   L.push('');
 
   if (p.incluirContexto) {
-    if (p.config.contexto.trim()) {
+    const contexto = (p.config?.contexto || '').trim();
+    if (contexto) {
       L.push('## Meu contexto');
-      L.push(p.config.contexto.trim());
+      L.push(contexto);
       L.push('');
     }
-    const ativos = p.objetivos.filter((o) => o.status === 'ativo');
+    const ativos = (p.objetivos || []).filter((o) => o && o.status === 'ativo');
     if (ativos.length) {
       L.push('## Objetivos de médio/longo prazo');
       for (const o of ativos) {
-        const pil = p.pilares.find((x) => x.id === o.pilar_id)?.nome || '';
-        L.push(`- **${o.titulo}** (${pil}${o.prazo ? `, prazo ${ddmm(o.prazo)}/${o.prazo.slice(0, 4)}` : ''})${o.descricao ? ` — ${o.descricao}` : ''}`);
+        const pil = (p.pilares || []).find((x) => x.id === o.pilar_id)?.nome || '';
+        const prazoStr = o.prazo ? `, prazo ${ddmm(o.prazo)}/${String(o.prazo).slice(0, 4)}` : '';
+        L.push(`- **${o.titulo}** (${pil}${prazoStr})${o.descricao ? ` — ${o.descricao}` : ''}`);
       }
       L.push('');
     }
@@ -489,15 +505,19 @@ export function gerarInstrucoesGem(
   L.push('**Quando eu pedir para remarcar algo** ("hoje não vou conseguir correr"): mova o evento para o próximo horário viável que não conflite com musculação (corrida não vai em dia de força).');
   L.push('');
 
-  if (config.contexto.trim()) {
+  const contexto = (config?.contexto || '').trim();
+  if (contexto) {
     L.push('# Meu contexto');
-    L.push(config.contexto.trim());
+    L.push(contexto);
     L.push('');
   }
-  const ativos = objetivos.filter((o) => o.status === 'ativo');
+  const ativos = (objetivos || []).filter((o) => o && o.status === 'ativo');
   if (ativos.length) {
     L.push('# Objetivos de médio/longo prazo');
-    ativos.forEach((o) => L.push(`- **${o.titulo}**${o.prazo ? ` (prazo ${ddmm(o.prazo)}/${o.prazo.slice(0, 4)})` : ''}${o.descricao ? ` — ${o.descricao}` : ''}`));
+    ativos.forEach((o) => {
+      const prazoStr = o.prazo ? ` (prazo ${ddmm(o.prazo)}/${String(o.prazo).slice(0, 4)})` : '';
+      L.push(`- **${o.titulo}**${prazoStr}${o.descricao ? ` — ${o.descricao}` : ''}`);
+    });
   }
   return L.join('\n');
 }

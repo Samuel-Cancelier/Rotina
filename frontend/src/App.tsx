@@ -5,6 +5,7 @@ import { SemanaView } from './components/SemanaView';
 import { RelatorioView } from './components/RelatorioView';
 import { ConfigView } from './components/ConfigView';
 import { AuthLockScreen } from './components/AuthLockScreen';
+import { ErrorBoundary } from './components/ui';
 import {
   PILARES_INICIAIS,
   CATEGORIAS_INICIAIS,
@@ -142,55 +143,57 @@ export default function App() {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'hoje' && (
-          <CheckinView
-            pilares={pilares}
-            categorias={categorias}
-            registros={registros}
-            eventos={agenda.eventos}
-            agendaConectada={agenda.conectado}
-            onSalvarRegistro={salvarRegistro}
-            onRemoverRegistro={removerRegistro}
-          />
-        )}
+        <ErrorBoundary fallbackTitle="Erro ao carregar o módulo">
+          {activeTab === 'hoje' && (
+            <CheckinView
+              pilares={pilares}
+              categorias={categorias}
+              registros={registros}
+              eventos={agenda.eventos}
+              agendaConectada={agenda.conectado}
+              onSalvarRegistro={salvarRegistro}
+              onRemoverRegistro={removerRegistro}
+            />
+          )}
 
-        {activeTab === 'semana' && (
-          <SemanaView
-            pilares={pilares}
-            categorias={categorias}
-            registros={registros}
-            eventos={agenda.eventos}
-            agendaConectada={agenda.conectado}
-          />
-        )}
+          {activeTab === 'semana' && (
+            <SemanaView
+              pilares={pilares}
+              categorias={categorias}
+              registros={registros}
+              eventos={agenda.eventos}
+              agendaConectada={agenda.conectado}
+            />
+          )}
 
-        {activeTab === 'relatorio' && (
-          <RelatorioView
-            pilares={pilares}
-            categorias={categorias}
-            registros={registros}
-            eventos={agenda.eventos}
-            agendaConectada={agenda.conectado}
-            objetivos={objetivos}
-            config={config}
-          />
-        )}
+          {activeTab === 'relatorio' && (
+            <RelatorioView
+              pilares={pilares}
+              categorias={categorias}
+              registros={registros}
+              eventos={agenda.eventos}
+              agendaConectada={agenda.conectado}
+              objetivos={objetivos}
+              config={config}
+            />
+          )}
 
-        {activeTab === 'config' && (
-          <ConfigView
-            pilares={pilares}
-            categorias={categorias}
-            objetivos={objetivos}
-            config={config}
-            agenda={agenda}
-            onSalvarPilar={salvarPilar}
-            onSalvarCategoria={salvarCategoria}
-            onRemoverCategoria={removerCategoria}
-            onSalvarObjetivo={salvarObjetivo}
-            onRemoverObjetivo={removerObjetivo}
-            onSalvarConfig={(novaCfg) => salvarConfigItem(novaCfg)}
-          />
-        )}
+          {activeTab === 'config' && (
+            <ConfigView
+              pilares={pilares}
+              categorias={categorias}
+              objetivos={objetivos}
+              config={config}
+              agenda={agenda}
+              onSalvarPilar={salvarPilar}
+              onSalvarCategoria={salvarCategoria}
+              onRemoverCategoria={removerCategoria}
+              onSalvarObjetivo={salvarObjetivo}
+              onRemoverObjetivo={removerObjetivo}
+              onSalvarConfig={(novaCfg) => salvarConfigItem(novaCfg)}
+            />
+          )}
+        </ErrorBoundary>
       </main>
     </div>
   );

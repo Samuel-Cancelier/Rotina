@@ -10,9 +10,13 @@ export function ymd(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-export function parseYmd(s: string): Date {
-  const [y, m, d] = s.split('-').map(Number);
-  return new Date(y, m - 1, d);
+export function parseYmd(s?: string | null): Date {
+  if (!s || typeof s !== 'string') return new Date();
+  const parts = s.split('-').map(Number);
+  const y = parts[0] || new Date().getFullYear();
+  const m = (parts[1] || 1) - 1;
+  const d = parts[2] || 1;
+  return new Date(y, m, d);
 }
 
 export function addDias(s: string, n: number): string {
@@ -26,8 +30,8 @@ export function hoje(): string {
 }
 
 /** Segunda-feira da semana que contém a data */
-export function inicioSemana(s: string): string {
-  const d = parseYmd(s);
+export function inicioSemana(s?: string | null): string {
+  const d = parseYmd(s || hoje());
   const dow = d.getDay(); // 0=Dom
   const diff = dow === 0 ? -6 : 1 - dow;
   d.setDate(d.getDate() + diff);
@@ -43,14 +47,18 @@ export function diaSemana(s: string): number {
 }
 
 /** "Seg 02/11" */
-export function rotuloDia(s: string): string {
+export function rotuloDia(s?: string | null): string {
+  if (!s) return '';
   const d = parseYmd(s);
+  if (isNaN(d.getTime())) return String(s);
   return `${DIAS_CURTOS[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 /** "02/11" */
-export function ddmm(s: string): string {
+export function ddmm(s?: string | null): string {
+  if (!s || typeof s !== 'string') return '';
   const d = parseYmd(s);
+  if (isNaN(d.getTime())) return String(s);
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 

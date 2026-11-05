@@ -92,3 +92,44 @@ export async function copiarTexto(texto: string): Promise<boolean> {
     return ok;
   }
 }
+
+export class ErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallbackTitle?: string },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error('ErrorBoundary capturou erro:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-6 bg-rose-950/20 border border-rose-800/40 rounded-2xl text-center max-w-xl mx-auto my-8">
+          <h3 className="text-sm font-semibold text-white mb-1">
+            {this.props.fallbackTitle || 'Ocorreu um erro ao carregar esta tela'}
+          </h3>
+          <p className="text-xs text-rose-300/80 font-mono mb-4">
+            {this.state.error?.message || 'Erro inesperado'}
+          </p>
+          <button
+            type="button"
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className={btnSecundario}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}

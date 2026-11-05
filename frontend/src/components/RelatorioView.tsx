@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   FileText,
   Copy,
@@ -83,33 +83,59 @@ export const RelatorioView: React.FC<RelatorioViewProps> = ({
     setMes(d.getMonth() + 1);
   };
 
-  const textoRelatorio =
-    tipoPeriodo === 'semanal'
-      ? gerarRelatorioSemanal({
-          inicio: semanaInicio,
-          pilares,
-          categorias,
-          registros,
-          eventos,
-          agendaConectada,
-          objetivos,
-          config,
-          incluirContexto
-        })
-      : gerarRelatorioMensal({
-          ano,
-          mes,
-          pilares,
-          categorias,
-          registros,
-          eventos,
-          agendaConectada,
-          objetivos,
-          config,
-          incluirContexto
-        });
+  const textoRelatorio = useMemo(() => {
+    try {
+      return tipoPeriodo === 'semanal'
+        ? gerarRelatorioSemanal({
+            inicio: semanaInicio,
+            pilares,
+            categorias,
+            registros,
+            eventos,
+            agendaConectada,
+            objetivos,
+            config,
+            incluirContexto
+          })
+        : gerarRelatorioMensal({
+            ano,
+            mes,
+            pilares,
+            categorias,
+            registros,
+            eventos,
+            agendaConectada,
+            objetivos,
+            config,
+            incluirContexto
+          });
+    } catch (err: any) {
+      console.error('Erro ao gerar relatório:', err);
+      return `# Erro ao gerar relatório\n\nNão foi possível processar o relatório: ${err?.message || 'Erro desconhecido'}.\n\nPor favor, recarregue a página ou contate o suporte.`;
+    }
+  }, [
+    tipoPeriodo,
+    semanaInicio,
+    ano,
+    mes,
+    pilares,
+    categorias,
+    registros,
+    eventos,
+    agendaConectada,
+    objetivos,
+    config,
+    incluirContexto
+  ]);
 
-  const textoGem = gerarInstrucoesGem(pilares, categorias, objetivos, config);
+  const textoGem = useMemo(() => {
+    try {
+      return gerarInstrucoesGem(pilares, categorias, objetivos, config);
+    } catch (err: any) {
+      console.error('Erro ao gerar instruções do Gem:', err);
+      return `# Erro ao gerar instruções do Gem\n\n${err?.message || 'Erro desconhecido'}`;
+    }
+  }, [pilares, categorias, objetivos, config]);
 
   const handleCopiarRelatorio = async () => {
     const ok = await copiarTexto(textoRelatorio);
