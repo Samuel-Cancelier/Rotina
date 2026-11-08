@@ -293,14 +293,16 @@ export const SemanaView: React.FC<SemanaViewProps> = ({
                         </div>
                       )}
 
-                      {/* Dias ideais de execução */}
+                      {/* Dias de execução e agendamento */}
                       <div className="flex items-center gap-1 mt-3 pt-2.5 border-t border-[#1a1a1a]">
                         <span className="text-[10px] text-[#666] mr-1">Dias:</span>
                         {[1, 2, 3, 4, 5, 6, 0].map((diaIdx) => {
-                          const planejado = (c.dias_planejados || []).includes(diaIdx);
                           const dataDia = stats.dias[diaIdx === 0 ? 6 : diaIdx - 1];
                           const feitoNoDia = stats.registros.some(
                             (r) => r.data === dataDia && r.categoria_id === c.id && (r.status === 'feito' || r.status === 'parcial')
+                          );
+                          const agendadoNoDia = eventos.some(
+                            (ev) => ev.data === dataDia && ev.categoria_id === c.id
                           );
 
                           return (
@@ -309,8 +311,8 @@ export const SemanaView: React.FC<SemanaViewProps> = ({
                               className={`text-[9px] font-mono px-1 py-0.5 rounded ${
                                 feitoNoDia
                                   ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40'
-                                  : planejado
-                                  ? 'bg-[#222] text-[#aaa] border border-[#333]'
+                                  : agendadoNoDia
+                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                                   : 'text-[#444]'
                               }`}
                             >

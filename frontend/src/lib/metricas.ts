@@ -24,7 +24,7 @@ export function itensPlanejados(
   const itens: ItemPlanejado[] = [];
   const setDias = new Set(dias);
 
-  if (agendaConectada) {
+  if (agendaConectada && eventos.length > 0) {
     for (const ev of eventos) {
       if (!setDias.has(ev.data) || ev.data < janela) continue;
       const cat = categorias.find((c) => c.id === ev.categoria_id);
@@ -39,23 +39,6 @@ export function itensPlanejados(
         valor_sugerido: valorSugerido(ev, cat),
         terminou: ev.dia_inteiro ? ev.data < h : new Date(ev.fim) <= agora
       });
-    }
-  } else {
-    for (const d of dias) {
-      const dow = diaSemana(d);
-      for (const c of categorias) {
-        if (c.inativa || !(c.dias_planejados || []).includes(dow)) continue;
-        itens.push({
-          ref_id: `plano:${d}:${c.id}`,
-          origem: 'plano',
-          data: d,
-          hora: c.horario_sugerido,
-          titulo: c.nome,
-          categoria_id: c.id,
-          valor_sugerido: c.valor_padrao,
-          terminou: d < h
-        });
-      }
     }
   }
   return itens.sort((a, b) => (a.data + (a.hora || '99')).localeCompare(b.data + (b.hora || '99')));

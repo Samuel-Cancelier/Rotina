@@ -4,7 +4,7 @@ export const CORES_PILARES: Record<PilarId, string> = {
   pilar_saude: '#10b981', // emerald
   pilar_intelectual: '#3b82f6', // blue
   pilar_profissional: '#8b5cf6', // violet
-  pilar_criativo: '#ec4899', // pink
+  pilar_criativo: '#ec4899', // pink (legado)
   pilar_casa: '#f59e0b' // amber
 };
 
@@ -15,7 +15,7 @@ export const PILARES_INICIAIS: Pilar[] = [
     nome: 'Saúde & Físico',
     descricao: 'Força em casa, corrida e futsal — disciplina, longevidade e saúde mental',
     cor: CORES_PILARES.pilar_saude,
-    peso_no_score_geral: 35
+    peso_no_score_geral: 40
   },
   {
     id: 'pilar_intelectual',
@@ -23,7 +23,7 @@ export const PILARES_INICIAIS: Pilar[] = [
     nome: 'Intelectual & Acadêmico',
     descricao: 'Graduação em ADS, estudo de tecnologia e leitura de não-ficção',
     cor: CORES_PILARES.pilar_intelectual,
-    peso_no_score_geral: 30
+    peso_no_score_geral: 35
   },
   {
     id: 'pilar_profissional',
@@ -31,15 +31,7 @@ export const PILARES_INICIAIS: Pilar[] = [
     nome: 'Profissional & FEIT',
     descricao: 'Escalar a agência FEIT: SaaS, dashboards e automações',
     cor: CORES_PILARES.pilar_profissional,
-    peso_no_score_geral: 15
-  },
-  {
-    id: 'pilar_criativo',
-    numero: 4,
-    nome: 'Pessoal & Criativo',
-    descricao: 'Pintura, violão/guitarra e repertório cultural — longe das telas',
-    cor: CORES_PILARES.pilar_criativo,
-    peso_no_score_geral: 15
+    peso_no_score_geral: 20
   },
   {
     id: 'pilar_casa',
@@ -63,10 +55,10 @@ export const CATEGORIAS_INICIAIS: Categoria[] = [
     valor_padrao: 45,
     meta_semanal_sessoes: 3,
     meta_semanal_volume: 0,
-    dias_planejados: [1, 2, 4],
+    dias_planejados: [],
     horario_sugerido: '18:30',
     duracao_min: 45,
-    descricao: 'Força em casa (halteres, barra, kettlebell). Seg/Ter/Qui — foco em consistência.'
+    descricao: 'Força em casa (halteres, barra, kettlebell). Foco em consistência.'
   },
   {
     id: 'cat_corrida',
@@ -78,7 +70,7 @@ export const CATEGORIAS_INICIAIS: Categoria[] = [
     valor_padrao: 3.5,
     meta_semanal_sessoes: 2,
     meta_semanal_volume: 7,
-    dias_planejados: [3, 5],
+    dias_planejados: [],
     horario_sugerido: '18:30',
     duracao_min: 35,
     descricao: 'Final do dia, 2x por semana (meta inicial de 7 km totais na semana, ~3.5 km por treino).'
@@ -93,7 +85,7 @@ export const CATEGORIAS_INICIAIS: Categoria[] = [
     valor_padrao: 60,
     meta_semanal_sessoes: 1,
     meta_semanal_volume: 0,
-    dias_planejados: [6],
+    dias_planejados: [],
     horario_sugerido: '16:00',
     duracao_min: 60
   },
@@ -107,7 +99,7 @@ export const CATEGORIAS_INICIAIS: Categoria[] = [
     valor_padrao: 1.5,
     meta_semanal_sessoes: 2,
     meta_semanal_volume: 3,
-    dias_planejados: [1, 4],
+    dias_planejados: [],
     horario_sugerido: '20:30',
     duracao_min: 90,
     descricao: 'Faculdade ADS, cursos e programação (meta inicial de 3 horas na semana).'
@@ -122,7 +114,7 @@ export const CATEGORIAS_INICIAIS: Categoria[] = [
     valor_padrao: 20,
     meta_semanal_sessoes: 3,
     meta_semanal_volume: 60,
-    dias_planejados: [1, 4, 0],
+    dias_planejados: [],
     horario_sugerido: '21:30',
     duracao_min: 30,
     descricao: 'Não-ficção e ciência. Meta inicial de 60 páginas por semana (~20 páginas por sessão).'
@@ -137,39 +129,10 @@ export const CATEGORIAS_INICIAIS: Categoria[] = [
     valor_padrao: 2,
     meta_semanal_sessoes: 1,
     meta_semanal_volume: 2,
-    dias_planejados: [6],
+    dias_planejados: [],
     horario_sugerido: '09:00',
     duracao_min: 120,
     descricao: 'SaaS NFC-e e automações (meta inicial de 1 bloco focado de 2 horas no sábado).'
-  },
-  {
-    id: 'cat_pintura',
-    pilar_id: 'pilar_criativo',
-    nome: 'Pintura',
-    tag: 'Pintura',
-    aliases: ['pintar', 'arte', 'desenho'],
-    unidade: 'min',
-    valor_padrao: 45,
-    meta_semanal_sessoes: 1,
-    meta_semanal_volume: 0,
-    dias_planejados: [2],
-    horario_sugerido: '20:30',
-    duracao_min: 45,
-    descricao: 'Descompressão criativa sem telas.'
-  },
-  {
-    id: 'cat_musica',
-    pilar_id: 'pilar_criativo',
-    nome: 'Violão / Guitarra',
-    tag: 'Violão',
-    aliases: ['violao', 'guitarra', 'musica', 'tocar'],
-    unidade: 'min',
-    valor_padrao: 20,
-    meta_semanal_sessoes: 1,
-    meta_semanal_volume: 0,
-    dias_planejados: [2],
-    horario_sugerido: '21:30',
-    duracao_min: 20
   },
   {
     id: 'cat_revisao',
@@ -181,7 +144,7 @@ export const CATEGORIAS_INICIAIS: Categoria[] = [
     valor_padrao: 1,
     meta_semanal_sessoes: 1,
     meta_semanal_volume: 0,
-    dias_planejados: [0],
+    dias_planejados: [],
     horario_sugerido: '19:00',
     duracao_min: 20,
     descricao: 'Gerar o relatório e planejar com o Gemini.'
@@ -221,14 +184,7 @@ export const OBJETIVOS_INICIAIS: Objetivo[] = [
     id: 'obj_saude',
     pilar_id: 'pilar_saude',
     titulo: 'Disciplina física inegociável',
-    descricao: 'Força em casa (seg/ter/qui) + corrida 2–3x/semana; preparo para o futsal de sábado.',
-    status: 'ativo'
-  },
-  {
-    id: 'obj_criativo',
-    pilar_id: 'pilar_criativo',
-    titulo: 'Equilibrar o digital com o analógico',
-    descricao: 'Pintura, violão/guitarra e aprofundamento cultural como contraponto à rotina analítica.',
+    descricao: 'Força em casa + corrida 2–3x/semana; preparo para o futsal de sábado.',
     status: 'ativo'
   }
 ];
@@ -238,23 +194,13 @@ export const CONFIG_INICIAL: ConfigGeral = {
   contexto: `Trabalho fixo na Cresol durante o dia e toco a agência FEIT (SaaS como o analisador de NFC-e, dashboards e automações). Curso Análise e Desenvolvimento de Sistemas.
 
 Pilares de execução:
-- Musculação em casa (halteres, barras, kettlebells), hipertrofia e força — estritamente segunda, terça e quinta. Divisões: Peito + Ombro anterior; Costas + Bíceps + Ombro lateral/posterior.
-- Corrida no fim do dia, 2–3x/semana, fora dos dias de musculação (quarta, sexta ou fim de semana). Serve para construir disciplina e como transição trabalho → descanso.
+- Musculação em casa (halteres, barras, kettlebells), hipertrofia e força.
+- Corrida no fim do dia, 2–3x/semana. Serve para construir disciplina e como transição trabalho → descanso.
 - Estudo (foco profundo): faculdade, cursos de extensão e tecnologias para a FEIT e o trabalho.
 - Leitura: não-ficção, ciência, história e evolução humana.
-- Pintura: descompressão sem telas, foco no momento presente.
 - Futsal competitivo aos sábados (tarde/noite).
 
-Semana ideal:
-- Seg: Cresol + sprints FEIT | Musculação (Peito + Ombro anterior) | Estudo focado / Leitura
-- Ter: Cresol + sprints FEIT | Musculação (Costas + Bíceps + Ombro lat/post) | Pintura / Violão
-- Qua: Cresol + sprints FEIT | Corrida | Estudo / Jogos (CS2, simuladores)
-- Qui: Cresol + sprints FEIT | Musculação | Estudo focado / Leitura
-- Sex: Fechamento e planejamento | Corrida (2ª sessão) | Lazer com a parceira
-- Sáb: SaaS / projetos FEIT | Futsal | Lazer / Leitura / Pintura
-- Dom: Descanso ativo e revisão da semana | Corrida opcional | Preparação da semana
-
-Diretrizes: o treino ou a corrida marcam o fim do turno de trabalho. Pintura, leitura e música longe do setup de trabalho e sem celular.`,
+Diretrizes: o treino ou a corrida marcam o fim do turno de trabalho. Leitura longe do setup de trabalho e sem celular.`,
   nome_calendario: 'Rotina',
   checkin_inicio: ''
 };
