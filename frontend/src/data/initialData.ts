@@ -92,17 +92,17 @@ export const CATEGORIAS_INICIAIS: Categoria[] = [
   {
     id: 'cat_estudo',
     pilar_id: 'pilar_intelectual',
-    nome: 'Estudo focado',
+    nome: 'Estudo',
     tag: 'Estudo',
     aliases: ['estudar', 'faculdade', 'ads', 'curso', 'estudos'],
     unidade: 'h',
     valor_padrao: 1.5,
-    meta_semanal_sessoes: 2,
-    meta_semanal_volume: 3,
+    meta_semanal_sessoes: 0,
+    meta_semanal_volume: 0,
     dias_planejados: [],
-    horario_sugerido: '20:30',
-    duracao_min: 90,
-    descricao: 'Faculdade ADS, cursos e programação (meta inicial de 3 horas na semana).'
+    horario_sugerido: '',
+    duracao_min: 60,
+    descricao: 'Estudo sob demanda (faculdade ADS, cursos e programação). Agendado ou registrado conforme necessidade/meta do mês, sem dias fixos na semana.'
   },
   {
     id: 'cat_leitura',

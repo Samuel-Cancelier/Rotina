@@ -427,7 +427,8 @@ export function gerarInstrucoesGem(
   L.push('6. **Remarcar = mover o evento existente.** Nunca duplique. Se cancelar, apague.');
   L.push('7. **Não crie eventos com tag** para trabalho na Cresol, reuniões ou tarefas pontuais. Tarefas que não são hábito vão para o Google Tasks ou para o calendário principal SEM colchetes.');
   L.push('8. **Antes de criar**, mostre a proposta numa tabela (Dia | Início–Fim | Título) e espere minha confirmação. Depois crie tudo de uma vez e confirme o que foi criado.');
-  L.push('9. Respeite as transições: treino de força ou corrida marcam o fim do turno de trabalho; leitura, pintura e música ficam à noite, longe do setup de trabalho.');
+  L.push('9. Respeite as transições: treino de força ou corrida marcam o fim do turno de trabalho; leitura fica à noite, longe do setup de trabalho.');
+  L.push('10. **Estudo:** NUNCA force nem pré-agende eventos de [Estudo] por iniciativa própria na semana base. Estudo é sob demanda ou por meta mensal: só crie eventos de [Estudo] quando eu pedir explicitamente ou disser os dias/horários em que vou estudar.');
   L.push('');
 
   L.push('# Tabela de tags (única fonte da verdade)');
@@ -470,8 +471,7 @@ export function gerarInstrucoesGem(
     ex('Treino', 'Costas + Bíceps + Ombro lat/post — 60 min'),
     ex('Leitura', 'Sapiens — 30 páginas'),
     ex('Estudo', 'Faculdade ADS: Banco de Dados — 2 h'),
-    ex('FEIT', 'SaaS NFC-e: tela de relatórios — 3 h'),
-    ex('Pintura', 'Estudo de cores — 60 min')
+    ex('FEIT', 'SaaS NFC-e: tela de relatórios — 3 h')
   ]
     .filter(Boolean)
     .forEach((x) => L.push(x as string));

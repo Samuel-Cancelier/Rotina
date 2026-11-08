@@ -681,7 +681,7 @@ export const CheckinView: React.FC<CheckinViewProps> = ({
           >
             <h3 className="text-base font-semibold text-white">Lançar Atividade Fora da Agenda</h3>
             <p className="text-xs text-[#888] mt-1">
-              Fez um treino extra, pintura ou adiantou a leitura? Registre aqui.
+              Fez um treino extra, adiantou a leitura ou realizou outra atividade? Registre aqui.
             </p>
 
             <div className="mt-4 space-y-3">
