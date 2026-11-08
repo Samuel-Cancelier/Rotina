@@ -196,7 +196,8 @@ export function gerarRelatorioSemanal(p: ParamsRelatorio): string {
   L.push('## O que eu preciso de você, Gemini');
   L.push('1. Analise meu desempenho da semana: onde fui bem, onde falhei e por quê (use os motivos e notas).');
   L.push('2. Aponte gargalos e padrões (dias/horários que mais falham) e sugira ajustes realistas.');
-  L.push('3. Proponha a agenda da próxima semana seguindo o padrão de eventos "[Tag] descrição — quantidade" no calendário "' + (p.config.nome_calendario || 'Rotina') + '", e só crie os eventos depois que eu confirmar.');
+  L.push('3. **Progressão de metas:** Se eu estiver cumprindo ou superando as metas com consistência (ex: corrida batendo 5 km, leitura batendo 10 págs, FEIT batendo 6h), avalie se está na hora de subir as metas (recomende aumento progressivo de volume ou sessões).');
+  L.push('4. Proponha a agenda da próxima semana seguindo o padrão de eventos "[Tag] descrição — quantidade" no calendário "' + (p.config.nome_calendario || 'Rotina') + '", e só crie os eventos depois que eu confirmar.');
 
   return L.join('\n');
 }
@@ -342,7 +343,7 @@ export function gerarRelatorioMensal(p: ParamsRelatorioMensal): string {
   L.push('## O que eu preciso de você, Gemini (Diagnóstico Mensal)');
   L.push('1. **Balanço Geral do Mês:** Avalie minha consistência e disciplina ao longo de todo este mês.');
   L.push('2. **Gargalos Recorrentes:** Quais foram os maiores pontos de atrito (dias, horários ou hábitos) que mais sofreram falhas?');
-  L.push('3. **Ajustes Estratégicos:** Que mudanças graduais você propõe para o próximo mês para que eu consiga manter o ritmo sem me sobrecarregar?');
+  L.push('3. **Ajustes e Elevação de Metas:** Que mudanças você propõe para o próximo mês? Se os volumes atuais já estiverem confortáveis, recomende a subida progressiva das metas (corrida, leitura, FEIT).');
   L.push('4. **Planejamento do Próximo Ciclo:** Proponha a distribuição da semana inicial do próximo mês no padrão `[Tag] descrição — quantidade` para agendarmos no calendário "' + (p.config.nome_calendario || 'Rotina') + '".');
 
   return L.join('\n');
@@ -497,7 +498,7 @@ export function gerarInstrucoesGem(
   L.push('# Como trabalhamos');
   L.push('**Quando eu colar o "Relatório Semanal de Rotina":**');
   L.push('1. Analise aderência, metas, motivos de falha e padrões. Seja direto e honesto, sem bajulação.');
-  L.push('2. Proponha no máximo 3 ajustes concretos (horário, volume, dia). Progressão gradual: corrida no máximo +10% de volume por semana.');
+  L.push('2. Proponha no máximo 3 ajustes concretos (horário, volume, dia). **Progressão de metas:** monitore se estou batendo as metas com facilidade e consistência por 2 ou mais semanas consecutivas (ex: corrida batendo 5 km, leitura batendo 10 págs, FEIT batendo 6h); se sim, me desafie e recomende formalmente a elevação progressiva das metas (+10% a 15% de volume ou +1 sessão).');
   L.push('3. Monte a agenda da semana seguinte no padrão acima e crie os eventos após minha confirmação.');
   L.push('');
   L.push('**Quando eu colar tarefas do Google Tasks:** encaixe-as em horários livres sem conflitar com os hábitos. Tarefas que não são hábitos ficam sem colchetes.');

@@ -18,19 +18,19 @@ export const PILARES_INICIAIS: Pilar[] = [
     peso_no_score_geral: 40
   },
   {
-    id: 'pilar_intelectual',
-    numero: 2,
-    nome: 'Intelectual & Acadêmico',
-    descricao: 'Graduação em ADS, estudo de tecnologia e leitura de não-ficção',
-    cor: CORES_PILARES.pilar_intelectual,
-    peso_no_score_geral: 35
-  },
-  {
     id: 'pilar_profissional',
-    numero: 3,
+    numero: 2,
     nome: 'Profissional & FEIT',
     descricao: 'Escalar a agência FEIT: SaaS, dashboards e automações',
     cor: CORES_PILARES.pilar_profissional,
+    peso_no_score_geral: 35
+  },
+  {
+    id: 'pilar_intelectual',
+    numero: 3,
+    nome: 'Intelectual & Acadêmico',
+    descricao: 'Graduação em ADS, estudo de tecnologia e leitura de não-ficção',
+    cor: CORES_PILARES.pilar_intelectual,
     peso_no_score_geral: 20
   },
   {
@@ -67,13 +67,13 @@ export const CATEGORIAS_INICIAIS: Categoria[] = [
     tag: 'Corrida',
     aliases: ['correr', 'run', 'trote', 'cardio'],
     unidade: 'km',
-    valor_padrao: 3.5,
+    valor_padrao: 2.5,
     meta_semanal_sessoes: 2,
-    meta_semanal_volume: 7,
+    meta_semanal_volume: 5,
     dias_planejados: [],
     horario_sugerido: '18:30',
     duracao_min: 35,
-    descricao: 'Final do dia, 2x por semana (meta inicial de 7 km totais na semana, ~3.5 km por treino).'
+    descricao: 'Meta de 5 km por semana (ex: 2x 2,5 km).'
   },
   {
     id: 'cat_futsal',
@@ -111,13 +111,13 @@ export const CATEGORIAS_INICIAIS: Categoria[] = [
     tag: 'Leitura',
     aliases: ['ler', 'livro', 'leitura'],
     unidade: 'páginas',
-    valor_padrao: 20,
-    meta_semanal_sessoes: 3,
-    meta_semanal_volume: 60,
+    valor_padrao: 5,
+    meta_semanal_sessoes: 2,
+    meta_semanal_volume: 10,
     dias_planejados: [],
     horario_sugerido: '21:30',
     duracao_min: 30,
-    descricao: 'Não-ficção e ciência. Meta inicial de 60 páginas por semana (~20 páginas por sessão).'
+    descricao: 'Meta inicial de 40 páginas por mês (~10 páginas por semana, ~5 págs por sessão).'
   },
   {
     id: 'cat_feit',
@@ -126,13 +126,13 @@ export const CATEGORIAS_INICIAIS: Categoria[] = [
     tag: 'FEIT',
     aliases: ['saas', 'projeto', 'sprint', 'feit', 'programar'],
     unidade: 'h',
-    valor_padrao: 2,
-    meta_semanal_sessoes: 1,
-    meta_semanal_volume: 2,
+    valor_padrao: 3,
+    meta_semanal_sessoes: 2,
+    meta_semanal_volume: 6,
     dias_planejados: [],
     horario_sugerido: '09:00',
     duracao_min: 120,
-    descricao: 'SaaS NFC-e e automações (meta inicial de 1 bloco focado de 2 horas no sábado).'
+    descricao: 'SaaS NFC-e e automações (meta de 6 horas por semana).'
   },
   {
     id: 'cat_revisao',
